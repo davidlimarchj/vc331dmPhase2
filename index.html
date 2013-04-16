@@ -1,0 +1,109 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <title>My Compiler</title>
+    <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+    <link rel="stylesheet" type="text/css" href="compiler.css" />
+</head>
+<body onload="init();">
+    <h1>David March's Compiler Project</h1>
+    <p>
+        . . . <em>a simple parser for a simple grammar</em>:
+    </p>
+    <pre>
+Program       ::== Statement $
+
+Statement     ::== P(Expr)
+              ::== Id = Expr
+              ::== VarDecl
+              ::== { StatementList }
+
+StatementList ::== Statement StatementList
+          ::== ε
+Expr          ::== IntExpr
+              ::== CharExpr
+              ::== Id
+IntExpr       ::== digit op Expr
+              ::== digit
+CharExpr      ::== " CharList "
+CharList      ::== Char CharList
+              ::== ε
+VarDecl       ::== Type Id
+Type          ::== int | char
+Id            ::== Char
+Char          ::== a | b | c ... z
+digit         ::== 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 0
+op            ::== + | -
+    </pre>
+<form>
+<input type="checkbox" id="lexVerb">Verbose Lexer
+<input type="checkbox" id="parseVerb">Verbose Parser
+</form>
+    <div>
+        <textarea id="taSourceCode" cols="130" rows="18">{char a char b b = 2 a = b P("aabd") P(2+a)}</textarea>
+        <br>
+        <input type="button" id="btnCompile" value="Compile" onclick="btnCompile_click();"/>
+        <br>
+        <textarea id="taOutput" cols="130" rows="22"></textarea>
+    </div> 
+    <!-- Footer -->
+    <p>
+        <a href="http://validator.w3.org/check?uri=referer">
+            <img src="images/w3cvalidhtml5.jpg" alt="Valid HTML5" width="88" height="31" />
+        </a>
+    </p>
+   <!-- Client-side code down here, per the YSlow advice. 
+    // (http://developer.yahoo.com/performance/rules.html#js_bottom) -->
+    <script type="text/javascript" src="scripts/objectDef.js"></script>
+    <script type="text/javascript" src="scripts/helperFunctions.js"></script>
+    <script type="text/javascript" src="scripts/lexer.js"></script>
+    <!-- <script type="text/javascript" src="scripts/firstPassParse.js"></script>	
+    <!--<script type="text/javascript" src="scripts/secondPassParse.js"></script>	 -->    
+    <script type="text/javascript">
+    // Global variables
+    var tokens = new Array();
+    var CST = "";
+    var levelIn = 0;
+    
+    var lexVerb;
+    var parseVerb;
+    
+    
+    
+    function btnCompile_click()
+    {        
+        // This is executed as a result of the usr pressing the 
+        // "compile" button between the two text areas, above.  
+        // Note the <input> element's event handler: onclick="btnCompile_click();
+        
+	// Clear the message box, reset variables
+        document.getElementById("taOutput").value = "";
+	tokens = [];
+	CST = "";
+	levelIn = 0;
+
+	//Assign verbosity
+	lexVerb = document.getElementById("lexVerb").checked;
+	parseVerb = document.getElementById("parseVerb").checked;
+
+        putMessage("Compilation Started");
+        // Grab the tokens from the lexer . . .
+        tokens = lex(lexVerb);
+	
+	//Parse them
+	//CST = firstPassParse(parseVerb);
+	putMessage("\nCompilation Finished");
+    }
+    
+    function putMessage(msg)
+    {
+	var output = "";
+	for(var i =0; i < levelIn; i++)
+		output += "---";
+	output += msg + "\n"
+        document.getElementById("taOutput").value += output;
+    }
+    
+    </script>
+</body>
+</html>
