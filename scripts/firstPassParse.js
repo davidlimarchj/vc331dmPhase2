@@ -555,10 +555,11 @@ function parseCharList(index, end)
     
 	var result;
 	var startIndex = index;
-
+    tree = tree.addChild("B_charList", "");
+    
 	if(index != end) //The list hasn't been fully parsed
 	{
-		tree = tree.addChild("B_charList", "");
+		
 		if(verb)
 			putMessage("List is not empty");
 		
@@ -591,7 +592,7 @@ function parseCharList(index, end)
 									charMatch,
 									charListParse));
 		
-        tree = tree.parentRef();
+        
 	}
     else{ //We've reached the end of the list
 	    result = (new B_charList(0,"",""));
@@ -606,6 +607,7 @@ function parseCharList(index, end)
 			putMessage("Char list parsed");
 	}
 	
+    tree = tree.parentRef();
 	levelIn--;
 	return result;
 }

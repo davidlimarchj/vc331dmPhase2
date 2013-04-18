@@ -4,6 +4,7 @@
     var currScope;
     var CST;
     var queue;
+    var scopeQueue
 
 function secondPassParse(verbose, inCST)
 {
@@ -15,6 +16,7 @@ function secondPassParse(verbose, inCST)
 	CST = inCST;
     tree = new SyntaxTree(null, "NEWSCOPE", null);
     queue = new Array();
+    scopeQueue = new Array();
     
 	    
     putMessage("Started Second Pass Parsing");
@@ -22,7 +24,7 @@ function secondPassParse(verbose, inCST)
     queue.push(new Wrapper("END", ""));//Create the base
     
     if(verb){
-        var result = "Queue: ";
+        var result = "Queue For AST: ";
         for(var i=0; i<queue.length;i++){
             result += "["+queue[i].type+"]";
         }
@@ -36,32 +38,37 @@ function secondPassParse(verbose, inCST)
     putMessage("Finished Second Pass Parsing");
 	levelIn--;
 
+    putMessage("CST:");
     printTree(tree);
 	    
 	return tree;
 }
 
-function buildQueue(tree){
-    var numChildren = tree.children.length;
-    var specialRege = /NEWSCOPE|printState|idState|varDecl|stringExpr/;
+function buildQueue(CST){
+    var numChildren = CST.children.length;
+    var specialRege = /NEWSCOPE|printState|idState|varDecl/;
     
     if(numChildren == 0){//this is a leaf, push it on the queue
-        queue.push(new Wrapper(tree.type, tree.token));
+        queue.push(new Wrapper(CST.type, CST.token));
+    }
+    else if(CST.type == "B_stringExpr"){
+        var string = makeString(CST.children[0]);
+        queue.push(new Wrapper(string.type, string));
     }
     else{
-        if(specialRege.test(tree.type)){
-            queue.push(new Wrapper(tree.type, ""));
+        if(specialRege.test(CST.type)){
+            queue.push(new Wrapper(CST.type, ""));
         }
         
         if(numChildren == 3){
-            buildQueue(tree.children[1]);
-            buildQueue(tree.children[0]);
-            buildQueue(tree.children[2]);
+            buildQueue(CST.children[1]);
+            buildQueue(CST.children[0]);
+            buildQueue(CST.children[2]);
         }
         else{
-            buildQueue(tree.children[0]);
+            buildQueue(CST.children[0]);
             if(numChildren == 2){
-                buildQueue(tree.children[1]);
+                buildQueue(CST.children[1]);
             }
         }
     }
@@ -76,8 +83,6 @@ function processOne(){
     var oneChildRege = /printState/;
     var twoChildRege = /idState|varDecl|_plus$|_sub$/;
     
-    putMessage("Processing: "+currType+". Queue length: "+queue.length);
-    
     if(oneChildRege.test(currType)){
         if(verb)
             putMessage("AST processing branch with one child");
@@ -91,25 +96,6 @@ function processOne(){
         tree = tree.addChild(currType, currToken);
         processOne();
         processOne();
-        tree = tree.parentRef();
-    }
-    else if(currType == "B_stringExpr"){
-        if(verb)
-            putMessage("AST processing string expression");
-
-        tree = tree.addChild("T_string", new T_string(0,0));
-        var peek = queue.shift();
-        queue.unshift(peek);
-        if(peek.type == "T_char"){
-            tree.token.line = peek.token.line;
-            tree.token.column = peek.token.column;
-        }
-        while(peek.type == "T_char"){
-            queue.shift();
-            tree.token.inside = tree.token.inside+peek.token.inside;
-            peek = queue.shift();
-            queue.unshift(peek);
-        }
         tree = tree.parentRef();
     }
     else if(currType == "NEWSCOPE"){
@@ -136,6 +122,27 @@ function processOne(){
     }
     
 }
+
+function makeString(charList){
+    var string = new T_string(0,0);
+    if(charList.children.length == 2){
+        string.line = charList.children[0].line;
+        string.column = charList.children[0].column;
+    }
+    string.inside = makeStringHelper(charList);    
+    return string;   
+}
+
+function makeStringHelper(charList){
+    var result = "";
+    if(charList.children.length == 2){
+        result = charList.children[0].token.inside+makeStringHelper(charList.children[1]);
+    }
+    
+    return result;
+}
+
+
 /*
 // in ID ASSIGN
     else if(validId) //There is a valid id and expr, attempt to go through with the assignment

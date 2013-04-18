@@ -77,7 +77,7 @@ function simplePrintTree(tree, indent){
 	
 	var root = tree.type;
 	   
-	if(/userId|type|digit|char$|string/.test(root))//This is one of the tokens with extra information
+	if(/userId|type|digit|char$|string$/.test(root))//This is one of the tokens with extra information
 		result += "[" + root + "]---"+tree.token.inside+"\n";
 	else
 		result += "[" + root + "]\n";
