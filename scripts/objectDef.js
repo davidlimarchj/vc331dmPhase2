@@ -4,8 +4,6 @@ function T_print(line, column)
 	this.type ="T_print";
 	this.line = line;
 	this.column = column;
-	   if(verb)
-		putMessage("Print Token Created");
    }
    
    function T_equal(line, column)
@@ -13,17 +11,13 @@ function T_print(line, column)
 	this.type ="T_equal";
 	this.line = line;
 	this.column = column;
-	   if(verb)
-		putMessage("Equal Token Created");
    }
    
    function T_qoute(line, column)
    {
-	   this.type ="T_qoute";
+	this.type ="T_qoute";
 	this.line = line.toString();
 	this.column = column.toString();
-	if(verb)
-		putMessage("Qoute Token Created");
    }
    
    function T_plus(line, column)
@@ -31,8 +25,6 @@ function T_print(line, column)
 	   this.type ="T_plus";
 	this.line = line;
 	this.column = column;
-	   if(verb)
-		putMessage("Plus Token Created");
    }
 
    function T_sub(line, column)
@@ -40,8 +32,6 @@ function T_print(line, column)
        this.type ="T_sub";
 	this.line = line;
 	this.column = column;
-	   if(verb)
-		putMessage("Subtraction Token Created");
    }
    
    function T_openParen(line, column)
@@ -49,8 +39,6 @@ function T_print(line, column)
 	   this.type ="T_openParen";
 	this.line = line;
 	this.column = column;
-	   if(verb)
-		putMessage("Open Parenthesis Token Created");
    }
    
    function T_closeParen(line, column)
@@ -58,8 +46,6 @@ function T_print(line, column)
 	   this.type ="T_closeParen";
 	this.line = line;
 	this.column = column;
-	   if(verb)
-		putMessage("Close Parenthesis Token Created");
    }
    
    function T_openSBracket(line, column)
@@ -67,8 +53,6 @@ function T_print(line, column)
 	   this.type ="T_openSBracket";
 	this.line = line;
 	this.column = column;
-	   if(verb)
-		putMessage("Open Squiggly Bracket Token Created");
    }
    
    function T_closeSBracket(line, column)
@@ -76,8 +60,6 @@ function T_print(line, column)
 	   this.type ="T_closeSBracket";
 	this.line = line;
 	this.column = column;
-	   if(verb)
-		putMessage("Close Squiggly Bracket Token Created");
    }
    
    
@@ -87,8 +69,6 @@ function T_print(line, column)
 	   this.inside = str;
 	this.line = line;
 	this.column = column;
-	   if(verb)
-		putMessage("User Id Token Created with value " + str);
    }
    
    function T_type(str, line, column)
@@ -97,8 +77,6 @@ function T_print(line, column)
 	   this.inside = str
 	this.line = line;
 	this.column = column;
-	   if(verb)
-		putMessage("Variable Type Token Created");
    }
       
    
@@ -108,8 +86,6 @@ function T_print(line, column)
 	   this.inside = ident;
 	this.line = line;
 	this.column = column;
-	   if(verb)
-		putMessage("Digit Token Created with value " + ident);
    }
    
     function T_char(ident, line, column)
@@ -118,25 +94,27 @@ function T_print(line, column)
 	this.inside = ident;
 	this.line = line;
 	this.column = column;
-	   if(verb)
-		putMessage("Char Token Created with value " + ident);
    }
    
-function T_space(, line, column)
+function T_space(line, column)
    {
 	this.type ="T_char";
 	this.inside = " ";
 	this.line = line;
 	this.column = column;
-	   if(verb)
-		putMessage("Space Token Created");
+   }
+   
+ function T_string(line, column)
+   {
+    this.type ="T_string";
+	this.line = line;
+	this.column = column;
+    this.inside = "";
    }
    
        function T_BOF()
    {
 	   this.type ="T_BOF";
-	   if(verb)
-		putMessage("Beginning of File Token Created");
    }
    
        function T_EOF(line, column)
@@ -145,8 +123,6 @@ function T_space(, line, column)
 	this.line = line;
 	this.column = column;
 	foundEOF = true;
-	if(verb)
-		putMessage("End of File Token Created");
    }
    
     function T_error(ident,line, column)
@@ -155,9 +131,6 @@ function T_space(, line, column)
 	this.inside = ident;
 	this.line = line;
 	this.column = column;
-	   errorCount++;
-	if(verb)
-		putMessage("Error Token Created");
    }
 
 
@@ -217,6 +190,18 @@ function B_intExprWOp(size, digitT, op, expr)
 	this.type ="B_intExprWOp";
    }
    
+function B_stringExpr(size, inner)
+   {
+       this.size = size;
+	   this.inner = inner;
+	this.type ="B_intExpr";
+    this.chars = new Array();
+    this.addChar = function(inChar){
+        putMessage("here");
+        this.chars.push(inChar)
+    }
+   }
+   
 function B_charList(size, charT, charList)
    {
 	   this.size = size;
@@ -234,14 +219,14 @@ function B_id(size, idT)
    
 function B_error(step, expected, found, size)
    {
-	this.step = step
+	this.step = step;
 	this.expected = expected;
 	this.found = found;
 	this.size = size;
     this.line = found.line;
-    this.column = found.column
+    this.column = found.column;
 	this.type ="B_error";
-    this.base = found.base
+    this.base = found.base;
    }
     
     
@@ -257,20 +242,42 @@ function T_errorP(expected, found)
     this.base = found;
    }
     
+    
+function Wrapper(type, token){
+    this.type = type;
+    this.token = token;
+}
    
    
  //Syntax Tree definition
-function SyntaxTree(parent, token){
+function SyntaxTree(parent, type, token){
+    this.parent = parent;
+	this.type = type;
 	this.token = token;
-	this.parent = parent;
 	this.children = new Array();
+    this.spaceNeeded = 1;
+
 	
-	this.addChild = function(token)
+	this.addChild = function(type, token)
 	{
-		var child =new SyntaxTree(this, token);
-		children.push(child);
+		var child =new SyntaxTree(this, type, token);
+		this.children.push(child);
 		return child;
 	}
+	
+	this.parentRef= function()
+	{   
+		return this.parent;
+	}
+    
+    this.refresh = function()
+    {
+        this.spaceNeeded = 1;
+        for(var i =0;i<this.children.length;i++){
+            this.children[i].refresh();
+            this.spaceNeeded = this.spaceNeeded+this.children[i].spaceNeeded;
+        }
+    }
 	
 }
 
@@ -317,7 +324,7 @@ function HashTable(table)
     this.removeItem = function(key)
     {
         if (this.hasItem(key)) {
-            previous = this.items[key];
+            var previous = this.items[key];
             this.size--;
             delete this.items[key];
             return previous;
@@ -360,8 +367,6 @@ function variable(type, value){
 	this.type = type;
 	this.value = value;
 	this.used = false;
-	if(verb)
-		putMessage("Variable created of type " + type + " and value " + value);
 }
 
 
@@ -383,13 +388,11 @@ function ScopeTree(parent){
 	
 	this.addVar = function(token, type){
 		var previous = this.symTable.getItem(token.inside);
-		if (previous != null){ // Variable has already been defined in this scope
-			errorCount++; 
-			errors.push("Redefining variable at "+ token.line + ":" token.column + ". Previous declaration was of type "+ previous.type);
+		if (previous == null){ //Variable has not been defined locally, define it
+            this.symTable.setItem(token.inside, new variable(type, "!!undef!!"));
+			//errors.push("Redefining variable at "+ token.line + ":" token.column + ". Previous declaration was of type "+ previous.type);
 		}
-		else{ //Variable has not been defined locally, define it
-			this.symTable.setItem(token.inside, new variable(type, "!!undef!!"));
-		}
+        return previous;
 	}
 	
 	this.setVar = function(token, value){
@@ -397,13 +400,14 @@ function ScopeTree(parent){
 		if(item != null){ //The variable is defined in the local scope
 			var type = item.type;
 			var used = item.used;
-			this.symTable.setItem(token.inside, new variable(type, value, used);
+			this.symTable.setItem(token.inside, new variable(type, value, used));
+            return item;
 		}
 		else if(this.parent != null) //There is a parent to recursively check
 			return this.parent.setVar(token, value);
 		else{ //This is undeclared
-			errorCount++; 
-			errors.push("Undeclared variable at "+ token.line + ":" token.column + ". Trying to assign value "+ value);
+			return item;
+            //errors.push("Undeclared variable at "+ token.line + ":" token.column + ". Trying to assign value "+ value);
 		}
 	}
 	
@@ -421,39 +425,58 @@ function ScopeTree(parent){
 
 //An object that builds up an array of errors and prints them out
 
+var errorReference = new Array();
+//Lex Errors
+errorReference[0] = "Unkown symbol in Lex";
+errorReference[1] = "Non-char or space symbol between qoutes";
+errorReference[2] = "Unidentified indentifier found. User identifiers can only be one char long.";
+
+//Parse Errors
+errorReference[10] = "Expected ";
+errorReference[11] = "Did not find a close Sbracket for statement list. Will assume it was forgotten.";
+errorReference[12] = "Did not find a close qoute for char list. Will assume it was forgotten.";
+
+
+
+//Parse Warnings
+errorReference[50] = "Warning: Expected a dollar sign at the end of the program. Added for you.";
+errorReference[51] = "Warning: Found code after the dollar sign. Ignored.";
+errorReference[52] = "Warning: Token list was not properly lexed. Parser will attempt to continue.";
+
 function ErrorHandler()
-{	
+{    
 	var count = 0;
 	var errorArr = new Array();
-	var refrence = new Array("Unkown symbol in Lex",
-						"Non-char or space symbol between qoutes",
-						"Unidentified indentifier found. User identifiers can only be one char long."
-						
-						
-						
-						
-						);
 	
 	//internal object that holds the error refrence number, and the line and column where the error occured
-	function error(found, expected, number, line, column){
+	function error(found, expected, num, line, col){
 		this.found = found;
 		this.expected = expected;
-		this.number = number;
+		this.num = num;
 		this.line = line;
-		this.column = column;
+		this.column = col;
 	}
 	
-	this.add = function(found, expected, number, line, column)
+	this.add = function(found, expected, num, line, col)
 	{
-		errorArr.push(new error(found, expected, number, line, column));
+		errorArr.push(new error(found, expected, num, line, col));
 		count++;
 	}
+    
+    this.errorCount = function(){
+        return count;
+    }
 	
 	this.print = function(){
 		putMessage("Error List:");
 		for(var i=0;i<count;i++){
 			var currError =errorArr[i];
-			putMessage("Error "+currError.number+" at "+currError.line+","+currError.column+" : "+refrence[currError.number]);
+			if(currError.num == 10)
+				putMessage("Error "+currError.num+" at "+currError.line+","+currError.col+" : "+errorReference[currError.num]+currError.expected+" found "+currError.found);
+			if(currError.num >= 50)
+                putMessage(errorReference[currError.num]);
+            else
+				putMessage("Error "+currError.num+" at "+currError.line+","+currError.col+" : "+errorReference[currError.num]);
 			
 			/*
 		if(/userId|type|digit|char/.test(currError.base.type))//This is one of the tokens with extra information
@@ -461,6 +484,7 @@ function ErrorHandler()
 		else
 			    putMessage("At "+currError.line+":"+currError.column + " Expected: "+ currError.expected +". Found: " +currError.base.type);*/
 		}
+        putMessage("");
 	}
-}	
+}
 

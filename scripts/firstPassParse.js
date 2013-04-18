@@ -2,46 +2,37 @@
     var tree;
     var verb;
     //var currScope;
-    var errorCount;
+    //var errorCount;
     var errors;
     
     
-    function firstPassParse(verbose)
-    {
+function firstPassParse(verbose)
+{
     levelIn++;
-	
+    
 	//Initialize gloal vars
-	errorCount = 0;
-	errors = new Array();
+	errors = new ErrorHandler();
 	    
 	verb = verbose;
-	tree = "";
-	//currScope = new ScopeTree(null);
-	    
-        putMessage("Started First Pass Parsing");
-        tree = parseProgram();
 	
-        //Report the results.
-        putMessage("Parsing Completed with "+errorCount+" errors.");
 	    
-//	if(tree.type != "B_error") //No errors
-	  //  {
-	//	putMessage("Program was syntactically valid");
-		levelIn--;
-		printParseTree();
-		printSymbolTable();
-	//    }
-//	else //Encountered an error
-	 //   {
-	//	putMessage("Program was not syntactically valid");
-	//	levelIn--;
-		errorHandler();
-	  //  }
+    putMessage("Started First Pass Parsing");
+	parseProgram();
 	
-	return tree;
-    }
+    //Report the results.
+    putMessage("First Pass Parsing Completed with "+errors.errorCount()+" errors.");
+	    
+	levelIn--;
 
-     function parseProgram()
+	errors.print();
+    putMessage("CST:");
+    printTree(tree);
+
+	return tree;
+}
+
+
+function parseProgram()
     {
 	levelIn++;
 	    
@@ -49,51 +40,32 @@
 	    putMessage("Attempting to parse program");
 	var index = 0;
 	var result;
+	tree = new SyntaxTree(null, "B_program", "");
+	    
 	if(tokens[index].type != "T_BOF") //This is not a validly lexed program
 	{
-		putMessage("Warning: Token list was not properly lexed");
-		putMessage("	Parser will attempt to parse.");
-		errorCount++;
+		errors.add(tokens[index].type,"T_BOF",52,0,0);
 	}
 	else //The beginning is lexographically sound, skip the BOF
 		index++; 
 	
-	var statementParse = parseStatement(index);
-	if(statementParse.type != "B_error") //Parsing the Statement did not result in errors
-	{
-		result = (new B_program(statementParse.size,statementParse));
-		index+= statementParse.size;
-	}
-	else //Statement did not match
-		result = new B_error("B_program","Start to a program", statementParse.found, statementParse.size);
-
-	var EOFMatch = matchToken("T_EOF", index);
-	if(EOFMatch.type == "T_errorP") //There is code after we should be done parsing
-	{
-		putMessage("Error: Found extra code at "+EOFMatch.line+":"+EOFMatch.column+". Discarded");
-        errorCount++;
-    	errors.push(new B_error("B_Program", "Nothing", EOFMatch, 1));
-	}
+	parseStatement(index);
 	
-	if(verb)
-	{
-		if(result.type == "B_error")
-			putMessage("Not a valid program");
-		else
-			putMessage("Program parsed with "+result.size+" tokens");
-	}
+	putMessage("Program parsed");
 	
 	levelIn--;
 	return result;
 }
 
-    function parseStatement(index)
+
+function parseStatement(index)
     {
 	levelIn++;
 	if(verb)
 		putMessage("Attempting to parse statement");
 	    
 	var result;
+	//tree = tree.addChild("Statement", "");
 	    
 	//Try to parse
 	currToken = tokens[index];
@@ -111,10 +83,11 @@
 			result = parseStatementListState(index);
 			break;
 		default: //None of those matched
-			putMessage("Error: Expected the start to a statement at " +currToken.line+ ":" +currToken.column+". Found " +currToken.type +".");
-			errorCount++;
-            var currError = new B_error("B_statement", "Start to a statement", matchToken("start to a statement", index), 1);
-			errors.push(currError);
+			errors.add(currToken.type,"Start to a statement",10,currToken.line, currToken.column);
+			//putMessage("Error: Expected the start to a statement at " +currToken.line+ ":" +currToken.column+". Found " +currToken.type +".");
+			//errorCount++;
+			var currError = new B_error("B_statement", "Start to a statement", matchToken("start to a statement", index), 1);
+			//errors.push(currError);
 			result = currError;
 			break;
 		}
@@ -129,6 +102,7 @@
 	}
 	
 	levelIn--;
+	//tree = tree.parentRef();
 	return result;
     }
 
@@ -140,19 +114,21 @@ function parsePrintState(index)
 		putMessage("Attempting to parse print statement");
 	
 	var result;
+	tree = tree.addChild("B_printState", "");
 	var startIndex = index;
 	index++; //skip the P that has already been read
-	
 	
 	var openParenMatch = matchToken("T_openParen", index);
 	if(openParenMatch.type =="T_errorP")//The next token is not an open paren. Assume it's missing
 	{
-		putMessage("Error: Expected an open parenthesis after the print operator. Found "+openParenMatch.found.type+" at " +openParenMatch.found.line+":"+openParenMatch.found.column+"Will attempt to continue parsing");
-		errorCount++;
-		errors.push(new B_error("B_printState", "T_openParen", openParenMatch, 1));
+		errors.add(openParenMatch.found.type, "T_openParen", 10, openParenMatch.found.line, openParenMatch.found.column);
+		//putMessage("Error: Expected an open parenthesis after the print operator. Found "+openParenMatch.found.type+" at " +openParenMatch.found.line+":"+openParenMatch.found.column+"Will attempt to continue parsing");
+		//errorCount++;
+		//errors.push(new B_error("B_printState", "T_openParen", openParenMatch, 1));
 	}
 	else
 		index++; //skip the open paren
+        
 	
 	var exprParse = parseExpr(index);
 	index+= exprParse.size;
@@ -162,8 +138,9 @@ function parsePrintState(index)
 	if(closeParenMatch.type =="T_errorP")//The next token is not a close paren. Look for the next close paren and throw out anything in between
 	{
 		putMessage("Error: Expected a close parenthesis after the statement. Found "+closeParenMatch.found.type+" at "+closeParenMatch.found.line+":"+closeParenMatch.found.column);
-		errorCount++;
-		errors.push(new B_error("B_printState", "T_closeParen", closeParenMatch, 1));
+		//errorCount++;
+		//errors.push(new B_error("B_printState", "T_closeParen", closeParenMatch, 1));
+		errors.add(closeParenMatch.found.type, "T_closeParen", 10, closeParenMatch.found.line, closeParenMatch.found.column);
 		
 		var nextClose = findNext("T_closeParen","T_openParen",index);
 		if(nextClose != -1)
@@ -181,13 +158,14 @@ function parsePrintState(index)
 	
 	if(verb)
 	{
-		//if(result.type == "B_error")
-		//	putMessage("Not a print statement");
-		//else
+		if(result.type == "B_error")
+			putMessage("Not a print statement");
+		else
 			putMessage("Print statement parsed");
 	}
 	
 	levelIn--;
+	tree = tree.parentRef();
 	return result;
 }
 
@@ -199,6 +177,7 @@ function parseIdState(index)
 		putMessage("Attempting to parse id assignment statement");
 	    
 	var result;
+	tree = tree.addChild("B_idState", "");
 	var startIndex = index;
 	var validId = false;
 	    
@@ -206,9 +185,10 @@ function parseIdState(index)
 	index+= idParse.size;
 	if(idParse.type == "B_error") // This was not a valid id
 	{
-		putMessage("Error: Expected a user id. Found "+idParse.found.type+"at "+idParse.found.line+":"+idParse.found.column+". Will attempt to continue parsing");
-		errorCount++;
-		errors.push(new B_error("B_idState", "T_userId", idParse, idParse.size));
+		errors.add(idParse.found.type, "User Id", 10, idParse.found.line, idParse.found.column);
+		//putMessage("Error: Expected a user id. Found "+idParse.found.type+"at "+idParse.found.line+":"+idParse.found.column+". Will attempt to continue parsing");
+		//errorCount++;
+		//errors.push(new B_error("B_idState", "T_userId", idParse, idParse.size));
 	}
 	else
 		validId = true;
@@ -216,11 +196,12 @@ function parseIdState(index)
 	index++;
 	if(equalMatch.type == "T_errorP") //Equal sign is not present
 	{
-		putMessage("Error: Expected an equal sign after the user id. Found "+equalMatch.found.type+"at "+equalMatch.found.line+":"+equalMatch.found.column);
-		errorCount++;
-		errors.push(new B_error("B_printState", "T_closeParen", equalMatch, 1));
+		errors.add(equalMatch.found.type, "User Id", 10, equalMatch.found.line, equalMatch.found.column);
+		//putMessage("Error: Expected an equal sign after the user id. Found "+equalMatch.found.type+"at "+equalMatch.found.line+":"+equalMatch.found.column);
+		//errorCount++;
+		//errors.push(new B_error("B_printState", "T_closeParen", equalMatch, 1));
 		
-		/*var nextEqual = findNext("T_equal","",index);
+		var nextEqual = findNext("T_equal","",index);
 		if(nextEqual != -1)
 		{
 			putMessage("   Found an equal sign at "+tokens[nextEqual].line+ ":"+tokens[nextEqual].column+". Will resume parsing from there");
@@ -229,36 +210,19 @@ function parseIdState(index)
 		else //There are no more equal signs
 		{
 			putMessage("   Did not find an equal sign for the variable assignment. Will assume equal sign was forgotten");
-		}*/
+		}
 	}
 	
 	var exprParse = parseExpr(index);
 	index+= exprParse.size;
 	if(exprParse.type == "B_error")//This is not a valid expr
 	{
-		putMessage("Error: Expected an expression on the other side of the equal sign. Found "+exprParse.found.type+"at "+exprParse.found.line+":"+exprParse.found.column+". Will attempt to continue parsing");
-		errorCount++;
-		errors.push(new B_error("B_idState", "B_expr", exprParse, exprParse.size));
+		errors.add(exprParse.found.type, "Expression", 10, exprParse.found.line, exprParse.found.column);
+		//putMessage("Error: Expected an expression on the other side of the equal sign. Found "+exprParse.found.type+"at "+exprParse.found.line+":"+exprParse.found.column+". Will attempt to continue parsing");
+		//errorCount++;
+		//errors.push(new B_error("B_idState", "B_expr", exprParse, exprParse.size));
 	}
-	else if(validId) //There is a valid id and expr, attempt to go through with the assignment
-	{
-		var ident = idParse.idT.inside;
-		var value = exprParse;
-		if(symTable.hasItem(ident))
-		{
-			var existingVar = symTable.getItem(ident); //Retrieve the existing symbol defition to not overwrite it
-			existingVar.value = value; //Set the new value
-			symTable.setItem(ident, existingVar); //Put the symbol back in the table
-		}
-		else //This is a previously unseen variable, cannot be assigned until it is declared
-		{
-			putMessage("Found undeclared variable assignment at " + idParse.idT.line +":" +idParse.idT.column);
-			errors.push(new B_error("B_idState", "Declared user id", new T_errorP("declared user id", idParse.idT), idParse.size));
-			errorCount++;
-			//var newVar = new variable(undefined, value);
-			//symTable.setItem(ident, newVar); //Put the new symbol back in the table
-		}
-	}
+
 	
 	result = (new B_idState(index-startIndex,
 							idParse,
@@ -266,13 +230,14 @@ function parseIdState(index)
 	
 	if(verb)
 	{
-		//if(result.type == "B_error")
-		//	putMessage("Not an id assignment statement");
-		//else
+		if(result.type == "B_error")
+			putMessage("Not an id assignment statement");
+		else
 			putMessage("Id assignment parsed");
 	}
 	    
 	levelIn--;
+	tree = tree.parentRef();
 	return result;
     }
     
@@ -284,6 +249,7 @@ function parseVarDecl(index)
 		putMessage("Attempting to parse variable declaration");
     
 	var result;
+	tree = tree.addChild("B_varDecl", "");
 	var startIndex = index;
 	var validId = false;
 	    
@@ -292,37 +258,22 @@ function parseVarDecl(index)
 	index++;
 	if(typeMatch.type == "T_errorP")
 	{
-		putMessage("Error: Expected a var type. Found "+typeMatch.found.type+"at "+typeMatch.found.line+":"+typeMatch.found.column+". Will attempt to continue parsing");
-		errorCount++;
-		errors.push(new B_error("B_varDecl", "T_type", typeMatch, typeMatch.size));
+		errors.add(typeMatch.found.type, "Variable Type", 10, typeMatch.found.line, typeMatch.found.column);
+		//putMessage("Error: Expected a var type. Found "+typeMatch.found.type+"at "+typeMatch.found.line+":"+typeMatch.found.column+". Will attempt to continue parsing");
+		//errorCount++;
+		//errors.push(new B_error("B_varDecl", "T_type", typeMatch, typeMatch.size));
 	}
-	else
-		validId = true;
+    else
+        tree.addChild(typeMatch.type, typeMatch);
 		
 	var idParse = parseId( index);
 	index+= idParse.size;
 	if(idParse.type == "B_error") // This was not a valid id
 	{
-		putMessage("Error: Expected a user id. Found "+idParse.found.type+"at "+idParse.found.line+":"+idParse.found.column+". Will attempt to continue parsing");
-		errorCount++;
-		errors.push(new B_error("B_varDecl", "T_userId", idParse, idParse.size));
-	}
-	else if(validId) // this is a valid variable declaration. Add to the symbol table
-	{
-		var ident = idParse.idT.inside;
-		var type = typeMatch.inside;
-			
-		if(symTable.hasItem(ident))
-		{
-			var existingVar = symTable.getItem(ident); //Retrieve the existing symbol defition to not overwrite it
-			existingVar.type = type; //Set the new value
-			symTable.setItem(ident, existingVar); //Put the symbol back in the table
-		}
-		else //This is a previously unseen variable, needs to be created
-		{
-			var newVar = new variable(type, "");
-			symTable.setItem(ident, newVar); //Put the new symbol back in the table
-		}
+		errors.add(idParse.found.type, "User Id", 10, idParse.found.line, idParse.found.column);
+		//putMessage("Error: Expected a user id. Found "+idParse.found.type+"at "+idParse.found.line+":"+idParse.found.column+". Will attempt to continue parsing");
+		//errorCount++;
+		//errors.push(new B_error("B_varDecl", "T_userId", idParse, idParse.size));
 	}
 			
 	result = (new B_varDecl(index-startIndex,
@@ -331,13 +282,14 @@ function parseVarDecl(index)
 	
 	if(verb)
 	{
-		//if(result.type == "B_error")
-		//	putMessage("Not a variable declaration");
-		//else
+		if(result.type == "B_error")
+			putMessage("Not a variable declaration");
+		else
 			putMessage("Variable declaration  parsed");
 	}
 	
 	levelIn--
+	tree = tree.parentRef();
 	return result;
     }
     
@@ -349,6 +301,7 @@ function parseStatementListState(index)
 		putMessage("Attempting to parse statement list statement");
 	    
 	var result;
+	tree = tree.addChild("NEWSCOPE", "");
 	var startIndex = index;
 	index++; //skip the open squiggly bracket that has already been read
 	var nextClose = findNext("T_closeSBracket","T_openSBracket",index);
@@ -362,11 +315,12 @@ function parseStatementListState(index)
 	}
 	else //There are no more close Sbrackets
 	{
-		putMessage("Error: Did not find a close Sbracket for statement list. Will assume it was forgotten");
+        errors.add(tokens[tokens.length-2].type, "T_closeSBracket", 11, tokens[tokens.length-2].line, tokens[tokens.length-2].column);
+		//putMessage("Error: Did not find a close Sbracket for statement list. Will assume it was forgotten");
 		statementListParse = parseStatementList(index, tokens.length-2); //Treat the rest of the program as a statementlist except for the EOF token
 		index+= statementListParse.size;
-		errorCount++;
-		errors.push(new B_error("B_statementListState", "T_closeSBracket", tokens[index], 1));
+		//errorCount++;
+		//errors.push(new B_error("B_statementListState", "T_closeSBracket", tokens[index], 1));
 	}
 		
 	statementListParse.size = (index-startIndex);
@@ -374,13 +328,16 @@ function parseStatementListState(index)
 			
 	if(verb)
 	{
-		//if(result.type == "B_error")
-		//	putMessage("Not a statement list statement");
-		//else
+		if(result.type == "B_error")
+			putMessage("Not a statement list statement");
+		else
 			putMessage("Statement list statement parsed");
 	}
 	    
-	levelIn--
+	levelIn--;
+    tree = tree.addChild("ENDSCOPE", "");
+    tree = tree.parentRef();
+    tree = tree.parentRef();
 	return result;
     }
 
@@ -391,6 +348,7 @@ function parseStatementList(index, end)
 		putMessage("Attempting to parse statement list");
 	    
 	var result;
+	
 	var startIndex = index;
 	
 	if(index != end) //The list hasn't been fully parsed
@@ -398,14 +356,15 @@ function parseStatementList(index, end)
 		if(verb)
 			putMessage("List is not empty");
 		
+        tree = tree.addChild("B_statementList","");
 		var statementParse = parseStatement(index);
 		index+= statementParse.size;
-		/*if(statementParse.type == "B_error")// This code is not a statement. Try to parse the rest of the list
-		{
-			putMessage("Error: Expected a statement as part of a statement list. Found "+statementParse.found.type+" at "+statementParse.found.line+":"+statementParse.found.column);
-			errorCount++;
-			errors.push(new B_error("B_statementList", "B_statement", statementParse, statementParse.size));
-		}*/
+		//if(statementParse.type == "B_error")// This code is not a statement. Try to parse the rest of the list
+		//{
+		//	putMessage("Error: Expected a statement as part of a statement list. Found "+statementParse.found.type+" at "+statementParse.found.line+":"+statementParse.found.column);
+		//	errorCount++;
+		//	errors.push(new B_error("B_statementList", "B_statement", statementParse, statementParse.size));
+		//}
 		
 		var statementListParse = parseStatementList(index, end);
 		index+= statementListParse.size;
@@ -417,15 +376,19 @@ function parseStatementList(index, end)
 			result = (new B_statementList(index-startIndex,
 									statementParse,
 									statementListParse));
+        
+        tree = tree.parentRef();
 	}
-    else //We've reached the end of the list
+    else{ //We've reached the end of the list
+        //tree = tree.addChild("Epsilon","");
         result = (new B_statementList(0,"",""));
+    }
 	
 	if(verb)
 	{
-		//if(result.type == "B_error")
-		//	putMessage("Not a statement list");
-		//else
+		if(result.type == "B_error")
+			putMessage("Not a statement list");
+		else
 			putMessage("Statement list parsed");
 	}
 	    
@@ -435,12 +398,12 @@ function parseStatementList(index, end)
 
 
 function parseExpr(index)
-    {
+{
 	levelIn++;
 	if(verb)
 		putMessage("Attempting to parse expression");
 	var result;
-	    
+	
 	//Try to parse
 	currToken = tokens[index];
 	switch(currToken.type){
@@ -448,20 +411,21 @@ function parseExpr(index)
 			result = parseIntExpr(index);
 			break;
 		case "T_qoute":
-			result = parseCharExpr(index);
+			result = parseStringExpr(index);
 			break;
 		case "T_userId":
 			result = parseId(index);
 			break;
 		default: //None of those matched
-			putMessage("Error: Expected the start to an expr at " +currToken.line+ ":" +currToken.column+". Found " +currToken.type +".")
-			errorCount++;
+            errors.add(currToken.type, "the start to an expression", 10, currToken.line, currToken.column);
+			//putMessage("Error: Expected the start to an expr at " +currToken.line+ ":" +currToken.column+". Found " +currToken.type +".")
+			//errorCount++;
             var currError = new B_error("B_expr", "Start to an expr ", matchToken("start to an expr", index), 1)
-			errors.push(currError);
+			//errors.push(currError);
 			result = currError;
 			break;
 	}
-	
+
 	if(verb)
 	{
 		if(result.type == "B_error")
@@ -472,32 +436,39 @@ function parseExpr(index)
 	
 	levelIn--;
 	return result;
-    }
+}
     
     
-    function parseIntExpr(index)
+function parseIntExpr(index)
     {
 	levelIn++;
 	if(verb)
 		putMessage("Attempting to parse int expression");
 	
 	var result;
+	tree = tree.addChild("B_intExpr", "");
 	var startIndex = index;
 	
 	var digitMatch = matchToken("T_digit",index);
 	index++;
+    tree.addChild(digitMatch.type, digitMatch); //We already type checked in parseExpr
+    
 	var opMatch = matchToken("_op", index);
 	index++;
 	    
-	if(digitMatch.type == "T_errorP") //Found something other than a digit. Skip
+	//if(digitMatch.type == "T_errorP") //Found something other than a digit. Skip if the next isnt an operator
+	//{
+    //    errors.add(digitMatch.type, "a digit", 10, digitMatch.line, digitMatch.column);
+		//putMessage("Error: Expected a digit as part of an int expression. Found "+digitMatch.found.type+" at "+digitMatche.found.line+":"+digitMatch.found.column+". Will skip");
+		//errorCount++;
+		//errors.push(new B_error("B_intExpr", "T_digit", digitMatch, digitMatch.size));
+        
+    //    if(opMatch.type == "T_errorP") // The next isn't an operator, skip
+	//	    result = parseIntExpr(index+1);    
+	//}
+	if(opMatch.type != "T_errorP")//found a digit with an operator
 	{
-		putMessage("Error: Expected a digit as part of an int expression. Found "+digitMatch.found.type+" at "+digitMatche.found.line+":"+digitMatch.found.column+". Will skip");
-		errorCount++;
-		errors.push(new B_error("B_intExpr", "T_digit", digitMatch, digitMatch.size));
-		result = parseIntExpr(index+1);
-	}
-	else if(opMatch.type != "T_errorP")//found a digit with an operator
-	{
+        tree.addChild(opMatch.type, opMatch);
 		var exprParse = parseExpr(index);
 		index+= exprParse.size;
 		if(exprParse.type == "B_error")//This is not a valid expr
@@ -525,17 +496,19 @@ function parseExpr(index)
 	}
 	
 	levelIn--;
+	tree = tree.parentRef();
 	return result;
     }
     
     
-    function parseCharExpr(index)
+function parseStringExpr(index)
     {
 	levelIn++;
 	if(verb)
-		putMessage("Attempting to parse char expression");
-    
+		putMessage("Attempting to parse string expression");
+
 	var result;
+    tree = tree.addChild("B_stringExpr", "");
 	var startIndex = index;
 	index++; //skip the open qoute that has already been read
 	    
@@ -549,11 +522,12 @@ function parseExpr(index)
 	}
 	else //There are no more qoutes
 	{
-		putMessage("Error: Did not find a close qoute for char list. Will assume it was forgotten");
+        errors.add(tokens[tokens.length-2].type, "T_closeSBracket", 12, tokens[tokens.length-2].line, tokens[tokens.length-2].column);
+		//putMessage("Error: Did not find a close qoute for char list. Will assume it was forgotten");
 		charExprParse = parseCharList(index, tokens.length-2); //Treat the rest of the program as a char list except for the EOF token
 		index+= charExprParse.size;
-		errorCount++;
-		errors.push(new B_error("B_charExpr", "T_qoute", tokens[index], 1));
+		//errorCount++;
+		//errors.push(new B_error("B_charExpr", "T_qoute", tokens[index], 1));
 	}
 		
 	charExprParse.size = (index-startIndex);
@@ -561,13 +535,14 @@ function parseExpr(index)
 			
 	if(verb)
 	{
-		//if(result.type == "B_error")
-		//	putMessage("Not a statement list statement");
-		//else
-			putMessage("Char Expression parsed");
+		if(result.type == "B_error")
+			putMessage("Not a statement list statement");
+		else
+			putMessage("String Expression parsed");
 	}
 	    
 	levelIn--
+	tree = tree.parentRef();
 	return result;
     }
     
@@ -583,18 +558,28 @@ function parseCharList(index, end)
 
 	if(index != end) //The list hasn't been fully parsed
 	{
+		tree = tree.addChild("B_charList", "");
 		if(verb)
 			putMessage("List is not empty");
 		
 		var charMatch = matchToken("T_char", index);
+        var spaceMatch = matchToken("T_space", index);
 		index++;
-		if(charMatch.type == "T_errorP")// This is not a valid char. Try to parse the rest of the list
+		if(charMatch.type == "T_errorP" && spaceMatch.type == "T_errorP")// This is not a valid char. Try to parse the rest of the list
 		{
-			putMessage("Error: Expected a char as part of a char list. Found "+charMatch.found.type+" at "+charMatch.found.line+":"+charMatch.found.column);
-			errorCount++;
-			errors.push(new B_error("B_charList", "T_char", charMatch, charMatch.size));
+            errors.add(charMatch.type, "a char or space", 10, charMatch.line, charMatch.column);
+			//putMessage("Error: Expected a char as part of a char list. Found "+charMatch.found.type+" at "+charMatch.found.line+":"+charMatch.found.column);
+			//errorCount++;
+			//errors.push(new B_error("B_charList", "T_char", charMatch, charMatch.size));
 		}
-		
+		else{//This is valid syntax, add it to the tree
+    	    if(spaceMatch.type == "T_errorP")
+                tree.addChild(charMatch.type, charMatch);
+            else
+                tree.addChild(spaceMatch.type, spaceMatch);
+		}
+            
+        
 		var charListParse = parseCharList(index, end);
 		index+= charListParse.size;
 		if(charListParse.type == "B_error") //This is not a valid statement list. Leave this reccursive madness!
@@ -602,12 +587,16 @@ function parseCharList(index, end)
 			result = new B_error("B_charList", "B_charList", charListParse, charListParse.size);
 		}
 		else //The recursion gives us something valid
-			result = (new B_charList(index-startIndex,
+            result = (new B_charList(index-startIndex,
 									charMatch,
 									charListParse));
+		
+        tree = tree.parentRef();
 	}
-    else //We've reached the end of the list
+    else{ //We've reached the end of the list
 	    result = (new B_charList(0,"",""));
+		//tree = tree.addChild("Epsilon","");
+    }
         
 	if(verb)
 	{
@@ -619,7 +608,7 @@ function parseCharList(index, end)
 	
 	levelIn--;
 	return result;
-    }
+}
 
     
 function parseId(index)
@@ -629,9 +618,12 @@ function parseId(index)
 	    putMessage("Attempting to parse an id");
 	    
 	var result;
+	tree = tree.addChild("B_id","");
 	var charMatch = matchToken("T_userId", index);
-	if(charMatch.type != "T_errorP") // This is a valid type
+	if(charMatch.type != "T_errorP"){ // This is a valid type
+        tree.addChild(charMatch.type, charMatch);
 		result = new B_id(1, charMatch);
+	}
 	else //Not a match
 		result =new B_error("B_id", "T_userId", charMatch, 1);
 
@@ -644,12 +636,13 @@ function parseId(index)
 	}
 	    
 	levelIn--;
+	tree = tree.parentRef();
 	return result;
     }
 
    
 //Utilities
-    function matchToken(type, index)
+function matchToken(type, index)
     {
 	levelIn++;
 	    
@@ -668,15 +661,15 @@ function parseId(index)
 		{
 		case "_op":   
 			if(operationRege.test(token.type))
-            {
+			{
 				result = token;
-            }
-            else
+			}
+			else
 				result = new T_errorP(type, token);
-			    break;
+				break;
 		default:        
-				result = new T_errorP(type, token);
-				break;	
+			result = new T_errorP(type, token);
+			break;	
 			}
 	}
 	
@@ -684,7 +677,7 @@ function parseId(index)
 	return result;
     }
     
-    function findNext(searchType, nestingType, index)
+function findNext(searchType, nestingType, index)
     {
 	var location = -1;
     var nestlevel = 0;
@@ -706,4 +699,4 @@ function parseId(index)
 	}
     
     return location;
-    }
+}

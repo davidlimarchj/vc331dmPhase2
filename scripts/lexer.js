@@ -24,7 +24,7 @@
 		tokens = scannerTokenizer(sourceCode);
 		if(verb)
 			putMessage("Source Code Tokenized");
-		//putMessage("Lex Error Count: " + errors.count);
+		putMessage("Lex Error Count: " + errors.errorCount());
 		
 		levelIn--;
 		var lexReturnText = "Lex returned [";
@@ -36,11 +36,11 @@
 		lexReturnText += "]\n";
 		putMessage(lexReturnText);    
 		
-		//errors.print();
+		errors.print();
 		
 		return tokens;
 	    }
-/*
+
 		function scannerTokenizer(str)
 		{
 			
@@ -73,10 +73,8 @@
 					if(!inQoutes) //Not currently in between qoutation mark
 					{
 						if (wsRege.test(arr[i])) //Whitespace
-						{
-							if(verb)
-								putMessage("Encountered whitespace out of qoutes. Ignoring");	
-								column++;
+						{	
+							column++;
 						}
 						else if(symbolRege.test(arr[i])) //Acceptable Symbols
 						{
@@ -117,8 +115,9 @@
 						else
 						{
 							errors.add(arr[i], null, 0, line, column);
-							tokenList.push(new T_error(arr[i], line, column));
+                            tokenList.push(new T_error(arr[i], line, column));
 							column++;
+                            
 						}
 				    }
 				    else //Current in between qoutation marks
@@ -158,12 +157,14 @@
 			
 			if(!foundEOF)
 			{
-				putMessage("Warning: Expected a dollar sign at the end of the program. Added for you");
+                errors.add(null, "End of File", 50, line, column);
+				//putMessage("Warning: Expected a dollar sign at the end of the program. Added for you");
 				tokenList.push(new T_EOF(line, column));
 			}
 			else if(i < arr.length)
 			{
-				putMessage("Warning: Found code after the dollar sign. Ignored.");
+                errors.add(null, "Nothing", 51, line, column);
+				//putMessage("Warning: Found code after the dollar sign. Ignored.");
 			}
 			
 			levelIn--;
@@ -199,7 +200,7 @@ function symbolAnalysis(input, line, column)
     }
 		
 		
-    function identifierAnalysis(str, line, column)
+function identifierAnalysis(str, line, column)
     {
 
 	if(str.length == 1)
@@ -222,5 +223,5 @@ function symbolAnalysis(input, line, column)
 				break;
 		}
 	}
-   }*/
+   }
    

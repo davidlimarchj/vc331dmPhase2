@@ -1,73 +1,91 @@
-//Prints the completed Parse Tree
-function printParseTree(){
-	var parseReturnText = "\nParse Tree: \n" + printTree(tree,0);
+/*
+var CSTdiagram;
+var total;
+function printTree(tree){
+    CSTdiagram = new Array();
+    putMessage("CST:");
+    tree.refresh();
+    total = tree.spaceNeeded;
+    buildTree(tree, 0);
+    
+    for(var i =0; i < CSTdiagram.length; i++){//Go through every level of the tree
+        var output = "";
+        for(var j=0;j<total;j++){//Go all the way through every column
+            if(CSTdiagram[i][j] == undefined){
+                output += "           ";
+            }
+            else
+                output += CSTdiagram[i][j];
+        }
+        output += "\n";
+        document.getElementById("taOutput").value += output;
+    }
+}
+
+function buildTree(tree, level){
+    var numChildren = tree.children.length;
+    var remainder = numChildren % 2;
+    var halfWay = (numChildren - remainder) / 2;
+    var offset =0;
+    
+    //putMessage("numChildren ="+numChildren+" remainder: "+remainder+" halfway= "+halfWay+" spaceneeded: "+tree.spaceNeeded+" level: "+level);
+    if(remainder == 0){ //Even number of children
+        for(var i =0;i<halfWay; i++){
+            offset = offset+tree.children[i].spaceNeeded;
+        }
+    }
+    else{ //Odd number of children
+        for(var i=0;i<halfWay;i++){
+            offset = offset+tree.children[i].spaceNeeded;
+        }
+        offset = offset+Math.floor(tree.children[halfWay].spaceNeeded/2);
+    }
+    
+    if((CSTdiagram.length+1) >level){
+        var newLine = new Array();
+        for(var i =0; i<total;i++){
+            newLine.push("                ");
+        }
+        CSTdiagram.push(newLine);
+    }
+    var branch = "";
+    if(tree.type.length < 16){
+        var padding = "";
+        for(var i=0;i<(16-type.length)/2;i++){
+            padding += " ";
+        }
+        branch = (padding+tree.type+padding);
+    }
+    else
+        branch = tree.type;
+    CSTdiagram[level][offset] = branch;
+    for(var i=0; i<numChildren;i++){
+        buildTree(tree.children[i],level+1);
+    }
+}*/
+
+function printTree(tree){
+    var parseReturnText = simplePrintTree(tree,0);
 	putMessage(parseReturnText);
 }
-   
-   
-function printTree(tree, indent)
-   {
-	var result = "";
+
+function simplePrintTree(tree, indent){
+    var result = "";
 	//Generate the proper offset
 	for(var i=0;i<indent;i++)
 		result += "  ";
 	
 	var root = tree.type;
 	   
-	if(/userId|type|digit|char/.test(root))//This is one of the tokens with extra information
-		result += "[" + root + "]---"+tree.inside+"\n";
+	if(/userId|type|digit|char$|string/.test(root))//This is one of the tokens with extra information
+		result += "[" + root + "]---"+tree.token.inside+"\n";
 	else
 		result += "[" + root + "]\n";
 
-	if(!/T_*/.test(root)) //This is not a token leaf
+	if(tree.children.length > 0) //This is not a token leaf
 	{
-		//Recursively collect the rest of the tree
-		switch (root) {
-			case "B_program":
-				result += printTree(tree.statement,indent+1);
-				break;
-			case "B_printState":
-				result += printTree(tree.expr,indent+1);
-				break;
-			case "B_idState":
-				result += printTree(tree.id,indent+1);
-				result += printTree(tree.expr,indent+1);
-				break;
-			case "B_varDecl":
-				result += printTree(tree.kind,indent+1);
-				result += printTree(tree.id,indent+1);
-				break;
-			case "B_statementList":
-				if(tree.size > 0)//this isn't the empty list
-				{
-					result += printTree(tree.statement,indent+1);
-					result += printTree(tree.statementList,indent+1);
-				}
-				break;
-			case "B_intExpr":
-				result += printTree(tree.inner,indent+1);
-				break;
-			case "B_intExprWOp":
-				result += printTree(tree.digitT,indent+1);
-				result += printTree(tree.op,indent+1);
-				result += printTree(tree.expr,indent+1);
-				break;
-			case "B_charList":
-				if(tree.size > 0)//this isn't the empty list
-				{
-					result += printTree(tree.charT,indent+1);
-					result += printTree(tree.charList,indent+1);
-				}
-				break;
-			case "B_id":
-				result += printTree(tree.idT,indent+1);
-				break;
-			case "B_error":
-				break;
-			default:
-				result += "[???]";
-				break;
-		}
+		for(var i=0;i<tree.children.length;i++)
+				result += simplePrintTree(tree.children[i],indent+1);
 	}
 	
 	return result;
@@ -88,4 +106,5 @@ function printSymbolTable()
 	}
     putMessage(returnText);
 }
+
 	

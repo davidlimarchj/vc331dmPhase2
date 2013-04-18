@@ -37,10 +37,11 @@ op            ::== + | -
     </pre>
 <form>
 <input type="checkbox" id="lexVerb">Verbose Lexer
-<input type="checkbox" id="parseVerb">Verbose Parser
+<input type="checkbox" id="firstParseVerb">Verbose First Pass Parse
+<input type="checkbox" id="secondParseVerb">Verbose Second Pass Parse
 </form>
     <div>
-        <textarea id="taSourceCode" cols="130" rows="18">{char a char b b = 2 a = b P("aabd") P(2+a)}</textarea>
+        <textarea id="taSourceCode" cols="130" rows="18">{a=1{a="abc" {print(a)}} {print(2)}}$</textarea>
         <br>
         <input type="button" id="btnCompile" value="Compile" onclick="btnCompile_click();"/>
         <br>
@@ -57,17 +58,14 @@ op            ::== + | -
     <script type="text/javascript" src="scripts/objectDef.js"></script>
     <script type="text/javascript" src="scripts/helperFunctions.js"></script>
     <script type="text/javascript" src="scripts/lexer.js"></script>
-    <!-- <script type="text/javascript" src="scripts/firstPassParse.js"></script>	
-    <!--<script type="text/javascript" src="scripts/secondPassParse.js"></script>	 -->    
+    <script type="text/javascript" src="scripts/firstPassParse.js"></script>	
+    <script type="text/javascript" src="scripts/secondPassParse.js"></script>   
     <script type="text/javascript">
     // Global variables
     var tokens = new Array();
     var CST = "";
+    var AST = "";
     var levelIn = 0;
-    
-    var lexVerb;
-    var parseVerb;
-    
     
     
     function btnCompile_click()
@@ -83,15 +81,15 @@ op            ::== + | -
 	levelIn = 0;
 
 	//Assign verbosity
-	lexVerb = document.getElementById("lexVerb").checked;
-	parseVerb = document.getElementById("parseVerb").checked;
 
-        putMessage("Compilation Started");
-        // Grab the tokens from the lexer . . .
-        tokens = lex(lexVerb);
+    putMessage("Compilation Started");
+    // Grab the tokens from the lexer . . .
+    tokens = lex(document.getElementById("lexVerb").checked);
+
 	
 	//Parse them
-	//CST = firstPassParse(parseVerb);
+    CST = firstPassParse(document.getElementById("firstParseVerb").checked);
+    AST = secondPassParse(document.getElementById("secondParseVerb").checked, CST);
 	putMessage("\nCompilation Finished");
     }
     
@@ -100,7 +98,7 @@ op            ::== + | -
 	var output = "";
 	for(var i =0; i < levelIn; i++)
 		output += "---";
-	output += msg + "\n"
+	output += msg + "\n";
         document.getElementById("taOutput").value += output;
     }
     
