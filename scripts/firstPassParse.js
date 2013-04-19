@@ -26,7 +26,7 @@ function firstPassParse(verbose)
 
 	errors.print();
     putMessage("CST:");
-    printTree(tree);
+    tree.print();
 
 	return tree;
 }
@@ -49,7 +49,9 @@ function parseProgram()
 	else //The beginning is lexographically sound, skip the BOF
 		index++; 
 	
-	parseStatement(index);
+    var statementParse = parseStatement(index);
+	result = new B_program(statementParse.size, statementParse);
+    tree.token = result;
 	
 	putMessage("Program parsed");
 	
@@ -155,7 +157,8 @@ function parsePrintState(index)
 	}
 	
 	result = new B_printState(index-startIndex, exprParse);
-	
+	tree.token = result;
+    
 	if(verb)
 	{
 		if(result.type == "B_error")
@@ -227,7 +230,8 @@ function parseIdState(index)
 	result = (new B_idState(index-startIndex,
 							idParse,
 							exprParse));
-	
+	tree.token = result;
+    
 	if(verb)
 	{
 		if(result.type == "B_error")
@@ -279,7 +283,8 @@ function parseVarDecl(index)
 	result = (new B_varDecl(index-startIndex,
 						typeMatch,
 						idParse));
-	
+	tree.token = result;
+    
 	if(verb)
 	{
 		if(result.type == "B_error")
@@ -301,7 +306,7 @@ function parseStatementListState(index)
 		putMessage("Attempting to parse statement list statement");
 	    
 	var result;
-	tree = tree.addChild("NEWSCOPE", "");
+	tree = tree.addChild("NEWSCOPE", new B_scope("NEWSCOPE"));
 	var startIndex = index;
 	index++; //skip the open squiggly bracket that has already been read
 	var nextClose = findNext("T_closeSBracket","T_openSBracket",index);
@@ -325,6 +330,7 @@ function parseStatementListState(index)
 		
 	statementListParse.size = (index-startIndex);
 	result = statementListParse;
+    //tree.token = result;
 			
 	if(verb)
 	{
@@ -335,8 +341,7 @@ function parseStatementListState(index)
 	}
 	    
 	levelIn--;
-    tree = tree.addChild("ENDSCOPE", "");
-    tree = tree.parentRef();
+    tree.addChild("ENDSCOPE", new B_scope("ENDSCOPE"));
     tree = tree.parentRef();
 	return result;
     }
@@ -376,7 +381,7 @@ function parseStatementList(index, end)
 			result = (new B_statementList(index-startIndex,
 									statementParse,
 									statementListParse));
-        
+        tree.token = result;
         tree = tree.parentRef();
 	}
     else{ //We've reached the end of the list
@@ -487,6 +492,8 @@ function parseIntExpr(index)
 		result = (new B_intExpr(1,digitMatch));
 	}
 	
+    tree.token = result;
+    
 	if(verb)
 	{
 		if(result.type == "B_error")
@@ -532,6 +539,7 @@ function parseStringExpr(index)
 		
 	charExprParse.size = (index-startIndex);
 	result = charExprParse;
+    tree.token = result;
 			
 	if(verb)
 	{
@@ -598,7 +606,9 @@ function parseCharList(index, end)
 	    result = (new B_charList(0,"",""));
 		//tree = tree.addChild("Epsilon","");
     }
-        
+     
+    tree.token = result;
+     
 	if(verb)
 	{
 		if(result.type == "B_error")
@@ -628,7 +638,9 @@ function parseId(index)
 	}
 	else //Not a match
 		result =new B_error("B_id", "T_userId", charMatch, 1);
-
+    
+    tree.token = result;
+    
 	if(verb)
 	{
 		if(result.type == "B_error")

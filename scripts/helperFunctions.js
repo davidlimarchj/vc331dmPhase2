@@ -64,10 +64,7 @@ function buildTree(tree, level){
     }
 }*/
 
-function printTree(tree){
-    var parseReturnText = simplePrintTree(tree,0);
-	putMessage(parseReturnText);
-}
+
 
 function simplePrintTree(tree, indent){
     var result = "";
@@ -92,19 +89,44 @@ function simplePrintTree(tree, indent){
 }
 
 
-function printSymbolTable()
+function printSymbolTable(tree, number)
 {
-	var identifiers = symTable.keys();
-	var varObjs = symTable.values();
-    var returnText ="";
-	
-	returnText +="Symbol Table:\n";
-	returnText +="Identifier |Type        |Value\n";
-	
-	for(var i=0;i<identifiers.length;i++){
-			returnText +=""+identifiers[i] + "           "+ varObjs[i].type +"     " +varObjs[i].value.type+"\n";
-	}
-    putMessage(returnText);
+	var identifiers = tree.symTable.keys();
+	var varObjs = tree.symTable.values();
+	var returnText = "";
+
+    if(identifiers.length > 0){
+        returnText += "-Scope "+number+"-\n"
+    	for(var i=0;i<identifiers.length;i++){
+    		returnText +=""+identifiers[i] + "           ";
+            returnText += varObjs[i].type;
+            if(varObjs[i].type.length < 16){
+                for(var j=0;j<16-varObjs[i].type.length;j++)
+                   returnText += " ";
+            }
+            var position = varObjs[i].line+":"+varObjs[i].column
+            returnText += position;
+            if(position.length < 16){
+                for(var j=0;j<16-position.length;j++)
+                    returnText += " ";
+            }
+            if(varObjs[i].value == undefined){
+                returnText += "undefined\n";
+            }
+            else if(/userId|type|digit|char$|string$/.test(varObjs[i].value.type))//This is one of the tokens with extra information
+        	    returnText += varObjs[i].value.inside+"\n";
+    	    else
+    		    returnText += varObjs[i].value.type+"\n";
+    	}
+    returnText +="\n";
+    }
+    
+    for (var i = 0; i < tree.children.length; i++) {
+        returnText += printSymbolTable(tree.children[i], (number*10+1)+i)
+    }
+    
+    return returnText;
+    
 }
 
 	
