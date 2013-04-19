@@ -25,6 +25,7 @@ function T_print(line, column)
 	   this.type ="T_plus";
 	this.line = line;
 	this.column = column;
+    this.inside ="+";
    }
 
    function T_sub(line, column)
@@ -32,6 +33,7 @@ function T_print(line, column)
        this.type ="T_sub";
 	this.line = line;
 	this.column = column;
+    this.inside ="-";
    }
    
    function T_openParen(line, column)
@@ -69,6 +71,7 @@ function T_print(line, column)
 	   this.inside = str;
 	this.line = line;
 	this.column = column;
+    this.scope = "";
    }
    
    function T_type(str, line, column)
@@ -112,7 +115,7 @@ function T_space(line, column)
     this.inside = "";
    }
    
-       function T_BOF()
+function T_BOF()
    {
 	   this.type ="T_BOF";
    }
@@ -217,6 +220,10 @@ function B_id(size, idT)
 	this.type ="B_id";
    }
    
+function B_scope(type){
+    this.type = type;
+}
+   
 function B_error(step, expected, found, size)
    {
 	this.step = step;
@@ -228,6 +235,8 @@ function B_error(step, expected, found, size)
 	this.type ="B_error";
     this.base = found.base;
    }
+   
+   
     
     
 //Parse Error Token
@@ -241,12 +250,7 @@ function T_errorP(expected, found)
     this.column = found.column;
     this.base = found;
    }
-    
-    
-function Wrapper(type, token){
-    this.type = type;
-    this.token = token;
-}
+
    
    
  //Syntax Tree definition
@@ -277,6 +281,11 @@ function SyntaxTree(parent, type, token){
             this.children[i].refresh();
             this.spaceNeeded = this.spaceNeeded+this.children[i].spaceNeeded;
         }
+    }
+    
+    this.print =function(tree){
+        var parseReturnText = simplePrintTree(this,0);
+        putMessage(parseReturnText);
     }
 	
 }
@@ -363,10 +372,12 @@ function HashTable(table)
     }
 }
 
-function variable(type, value){
+function variable(type, value, line, column){
 	this.type = type;
 	this.value = value;
-	this.used = false;
+    this.line = line;
+    this.column = column;
+    this.used = false;
 }
 
 
@@ -386,40 +397,31 @@ function ScopeTree(parent){
 			return null;
 	}
 	
-	this.addVar = function(token, type){
-		var previous = this.symTable.getItem(token.inside);
-		if (previous == null){ //Variable has not been defined locally, define it
-            this.symTable.setItem(token.inside, new variable(type, "!!undef!!"));
-			//errors.push("Redefining variable at "+ token.line + ":" token.column + ". Previous declaration was of type "+ previous.type);
-		}
-        return previous;
+	this.setVar = function(id, newVar){
+		return this.symTable.setItem(id, newVar);
 	}
-	
-	this.setVar = function(token, value){
-		var item =this.symTable.getItem(token.inside);
-		if(item != null){ //The variable is defined in the local scope
-			var type = item.type;
-			var used = item.used;
-			this.symTable.setItem(token.inside, new variable(type, value, used));
-            return item;
-		}
-		else if(this.parent != null) //There is a parent to recursively check
-			return this.parent.setVar(token, value);
-		else{ //This is undeclared
-			return item;
-            //errors.push("Undeclared variable at "+ token.line + ":" token.column + ". Trying to assign value "+ value);
-		}
-	}
+    
+    this.localHas = function(id){
+        return this.symTable.getItem(id);
+    }
 	
 	this.newScope = function(){
 		var newScope = new ScopeTree(this);
-		children.push(newScope);
+		this.children.push(newScope);
 		return newScope;
 	}
 	
 	this.closeScope = function(){
 		return this.parent;
 	}
+    
+    this.print = function(){
+        var returnText ="";
+	    returnText +="Symbol Table:\n";
+	    returnText +="Identifier |Type           |Decl Location  |Value\n";
+        returnText += printSymbolTable(this, 0)
+        putMessage(returnText);
+    }
 }
 
 
@@ -436,12 +438,23 @@ errorReference[10] = "Expected ";
 errorReference[11] = "Did not find a close Sbracket for statement list. Will assume it was forgotten.";
 errorReference[12] = "Did not find a close qoute for char list. Will assume it was forgotten.";
 
+//Sym Table Errors
+errorReference[20] = "Invalid type in variable declaration. Declaration was ";
+errorReference[21] = "Redeclared variable. Previous declaration was ";
+errorReference[22] = "Type mismatch in operation. Operation was";
+errorReference[23] = "Type mismatch in id assignment. Id assignment was";
+errorReference[24] = "Undeclared id. Id was:";
 
 
-//Parse Warnings
-errorReference[50] = "Warning: Expected a dollar sign at the end of the program. Added for you.";
-errorReference[51] = "Warning: Found code after the dollar sign. Ignored.";
-errorReference[52] = "Warning: Token list was not properly lexed. Parser will attempt to continue.";
+
+
+//Warnings
+errorReference[50] = "Expected a dollar sign at the end of the program. Added for you.";
+errorReference[51] = "Found code after the dollar sign. Ignored.";
+errorReference[52] = "Token list was not properly lexed. Parser will attempt to continue.";
+errorReference[53] = "Id declared but not used. Id: ";
+errorReference[54] = "Id used before its initialization. Id: ";
+
 
 function ErrorHandler()
 {    
@@ -472,11 +485,15 @@ function ErrorHandler()
 		for(var i=0;i<count;i++){
 			var currError =errorArr[i];
 			if(currError.num == 10)
-				putMessage("Error "+currError.num+" at "+currError.line+","+currError.col+" : "+errorReference[currError.num]+currError.expected+" found "+currError.found);
-			if(currError.num >= 50)
-                putMessage(errorReference[currError.num]);
+				putMessage("Error "+currError.num+" at "+currError.line+","+currError.column+" : "+errorReference[currError.num]+currError.expected+" found "+currError.found);
+			else if(currError.num > 10 && currError.num<20)
+                putMessage("Error "+currError.num+" at "+currError.line+","+currError.column+" : "+errorReference[currError.num]);
+            else if(currError.num > 20 && currError.num<30)
+                putMessage("Error "+currError.num+" at "+currError.line+","+currError.column+" : "+errorReference[currError.num]+currError.found+" "+currError.expected);
+            else if(currError.num >= 50)
+                putMessage("Warning "+currError.num+" at "+currError.line+","+currError.column+" : "+errorReference[currError.num]+ currError.found);
             else
-				putMessage("Error "+currError.num+" at "+currError.line+","+currError.col+" : "+errorReference[currError.num]);
+				putMessage("Error "+currError.num+" at "+currError.line+","+currError.column+" : "+errorReference[currError.num]);
 			
 			/*
 		if(/userId|type|digit|char/.test(currError.base.type))//This is one of the tokens with extra information

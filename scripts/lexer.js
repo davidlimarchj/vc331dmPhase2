@@ -27,7 +27,9 @@
 		putMessage("Lex Error Count: " + errors.errorCount());
 		
 		levelIn--;
-		var lexReturnText = "Lex returned [";
+		errors.print();
+        
+        var lexReturnText = "Lex returned [";
         
 		for(var i=0;i<tokens.length;i++)
 		{
@@ -36,7 +38,7 @@
 		lexReturnText += "]\n";
 		putMessage(lexReturnText);    
 		
-		errors.print();
+		
 		
 		return tokens;
 	    }
