@@ -1,28 +1,20 @@
-Functional:
-{char a char b b = 2 a = b P("aabd") P(2+a)}
-{{}}
-a = ""
-{P(2)}{P(3)}
+Working:
+{int a {int b b=2 a=1 int c c=a c=1+b} {int d d=5} a=2 string b b ="a pie" {print(b){}}}$
 
-{}
-{{{}}}$
-{{}{{{}}}}$
-P("a")$
-a = 1$
-P("inta")$
+Warnings:
+{int a int b a=1{string a a="abc" {print(a)}} {string c print(2+a)}}
+int a $ int c
 
+Lex Errors:
+{broken a print(/) a=";"}$
+int a$ int b
 
-Not functional:
-int 2
-P(a+2)
-2 = a
-{char ? char b b = 2 a = b P("aabd") P(2+a)}
-{char a char b = 2 a = b P("aabd") P(2+a)}
-{2+1
-{2}{3}
-"$"$
-"no spaces"$
-thisisnotaprogram$
-"two
-lines"$
-char 1$
+First Parse Errors:
+{string a a = "asb
+a+1
+
+Symbol Table Errors:
+{inz a string a print(b)}$
+
+Symbol Table Warnings:
+{string b string b int d print(1+b) d="a cat" e=5}$

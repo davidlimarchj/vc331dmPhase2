@@ -188,7 +188,7 @@ function parseIdState(index)
 	index+= idParse.size;
 	if(idParse.type == "B_error") // This was not a valid id
 	{
-		errors.add(idParse.found.type, "User Id", 10, idParse.found.line, idParse.found.column);
+		errors.add(idParse.found.type, "user Id", 10, idParse.found.line, idParse.found.column);
 		//putMessage("Error: Expected a user id. Found "+idParse.found.type+"at "+idParse.found.line+":"+idParse.found.column+". Will attempt to continue parsing");
 		//errorCount++;
 		//errors.push(new B_error("B_idState", "T_userId", idParse, idParse.size));
@@ -356,7 +356,7 @@ function parseStatementList(index, end)
 	
 	var startIndex = index;
 	
-	if(index != end) //The list hasn't been fully parsed
+	if(!(index >= end)) //The list hasn't been fully parsed
 	{
 		if(verb)
 			putMessage("List is not empty");

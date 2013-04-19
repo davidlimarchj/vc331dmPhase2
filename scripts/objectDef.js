@@ -429,7 +429,7 @@ function ScopeTree(parent){
 
 var errorReference = new Array();
 //Lex Errors
-errorReference[0] = "Unkown symbol in Lex";
+errorReference[0] = "Unkown symbol in lexer";
 errorReference[1] = "Non-char or space symbol between qoutes";
 errorReference[2] = "Unidentified indentifier found. User identifiers can only be one char long.";
 
@@ -441,8 +441,8 @@ errorReference[12] = "Did not find a close qoute for char list. Will assume it w
 //Sym Table Errors
 errorReference[20] = "Invalid type in variable declaration. Declaration was ";
 errorReference[21] = "Redeclared variable. Previous declaration was ";
-errorReference[22] = "Type mismatch in operation. Operation was";
-errorReference[23] = "Type mismatch in id assignment. Id assignment was";
+errorReference[22] = "Type mismatch in operation. Operation was ";
+errorReference[23] = "Type mismatch in id assignment. Id assignment was ";
 errorReference[24] = "Undeclared id. Id was:";
 
 
@@ -489,7 +489,7 @@ function ErrorHandler()
 			else if(currError.num > 10 && currError.num<20)
                 putMessage("Error "+currError.num+" at "+currError.line+","+currError.column+" : "+errorReference[currError.num]);
             else if(currError.num > 20 && currError.num<30)
-                putMessage("Error "+currError.num+" at "+currError.line+","+currError.column+" : "+errorReference[currError.num]+currError.found+" "+currError.expected);
+                putMessage("Error "+currError.num+" at "+currError.line+","+currError.column+" : "+errorReference[currError.num]+currError.found+currError.expected);
             else if(currError.num >= 50)
                 putMessage("Warning "+currError.num+" at "+currError.line+","+currError.column+" : "+errorReference[currError.num]+ currError.found);
             else

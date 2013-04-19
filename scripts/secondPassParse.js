@@ -95,7 +95,7 @@ function buildSymTable(){
     var currItem;
     for(var i=0;i<queue.length;i++){
         currItem = queue.shift();
-        //putMessage("In loop. Type: "+currItem.type+"i: "+ i);
+        //putMessage("In loop. Type: "+currItem.type+" i: "+ i);
         
         if(currItem.type == "B_varDecl" ){
             var typeWrap = queue.shift();
@@ -117,8 +117,8 @@ function buildSymTable(){
     		}
     		else //The variable is declared in the local scope. Push error, overwrite
     		{
-                errors.add(previous.type,id,21,typeWrap.line, typeWrap.column);
-    			symTable.setVar(id, newVar); //Put the symbol back in the table
+                errors.add(previous.type," "+id,21,typeWrap.line, typeWrap.column);
+    			scopeTree.setVar(id, newVar); //Put the symbol back in the table
     		}
             
             queue.push(currItem);
@@ -166,7 +166,6 @@ function buildSymTable(){
                 queue.unshift(digitWrap);
                 
                 var expr = exprWrap.inside;
-    
                 var typeVal = typeCheck(scopeTree, "int", exprWrap);
                 if(typeVal == null){
                     errors.add(digitWrap.inside,currItem.inside+exprWrap.inside,22,digitWrap.line, digitWrap.column);
@@ -186,8 +185,9 @@ function buildSymTable(){
                         errors.add(currItem.inside,"",54,currVar.line, currVar.column);    
                     }
                 }
-                else
-                    errors.add("",currVar.inside,24,currVar.line, currVar.column);
+                else{
+                    errors.add("",currItem.inside,24,currItem.line, currItem.column);
+                }
             }
         
             queue.push(currItem);
@@ -263,23 +263,27 @@ function makeStringHelper(charList){
 }
 
 
-function typeCheck(sTree, type, val){
-    //putMessage("Type Chekain. type:"+type+". val: "+val.inside)
-    
+function typeCheck(sTree, type, val){    
     var result = null;
-    if(val.type == "T_userId"){
-         var assignVar = scopeTree.member(val.inside);
-         if(assignVar != null){
-             result = typeCheck(sTree, type, assignVar.value);
+    
+    if(val != undefined){
+        //putMessage("Type Chekain. type:"+type+". val: "+val.inside+" val.type "+val.type)
+
+        if(val.type == "T_userId"){
+             var assignVar = scopeTree.member(val.inside);
+             if(assignVar != null){
+                 result = typeCheck(sTree, type, assignVar.value);
+             }
+             else{
+                errors.add("",val.inside,23,val.line, val.column);
+             }
          }
-         else
-            errors.add("",val.inside,23,id.line, id.column);
-     }
-    else if(type == "int" && intExprRege.test(val.type) ){
-        result =val;
-    }
-    else if(type == "string" && val.type == "T_string"){
-        result =val;
+        else if(type == "int" && intExprRege.test(val.type) ){
+            result =val;
+        }
+        else if(type == "string" && val.type == "T_string"){
+            result =val;
+        }
     }
     
     return result;

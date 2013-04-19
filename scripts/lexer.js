@@ -116,7 +116,7 @@
 						}
 						else
 						{
-							errors.add(arr[i], null, 0, line, column);
+							errors.add(arr[i], "", 0, line, column);
                             tokenList.push(new T_error(arr[i], line, column));
 							column++;
                             
@@ -148,7 +148,7 @@
 					}
 					else //Error
 					{
-						errors.add(arr[i], null, 1, line, column);
+						errors.add(arr[i], "", 1, line, column);
 						tokenList.push(new T_error(arr[i],line, column));
 						column++;
 					}
