@@ -27,6 +27,9 @@ function firstPassParse(verbose)
 	errors.print();
     putMessage("CST:");
     tree.print();
+    
+    if(errors.errorCount() > 0)
+        anyErrors = true;
 
 	return tree;
 }
@@ -84,6 +87,12 @@ function parseStatement(index)
 		case "T_openSBracket":
 			result = parseStatementListState(index);
 			break;
+        case "T_while":
+    		result = parseWhileState(index);
+			break;
+        case "T_if":
+    		result = parseIfState(index);
+			break;
 		default: //None of those matched
 			errors.add(currToken.type,"Start to a statement",10,currToken.line, currToken.column);
 			//putMessage("Error: Expected the start to a statement at " +currToken.line+ ":" +currToken.column+". Found " +currToken.type +".");
@@ -118,7 +127,7 @@ function parsePrintState(index)
 	var result;
 	tree = tree.addChild("B_printState", "");
 	var startIndex = index;
-	index++; //skip the P that has already been read
+	index++; //skip the print that has already been read
 	
 	var openParenMatch = matchToken("T_openParen", index);
 	if(openParenMatch.type =="T_errorP")//The next token is not an open paren. Assume it's missing
@@ -402,6 +411,79 @@ function parseStatementList(index, end)
     }
 
 
+function parseWhileState(index)
+    {
+    levelIn++;
+	if(verb)
+		putMessage("Attempting to parse while statement");
+	
+	var result;
+	tree = tree.addChild("B_whileState", "");
+	var startIndex = index;
+	index++; //skip the while that has already been read
+        
+	
+	var boolExprParse = parseBoolExpr(index);
+    index+= boolExprParse.size;
+	
+    
+    var stateListParse = parseStatementListState(index);
+    index+= stateListParse.size;
+    
+	
+	result = new B_whileState(index-startIndex, boolExprParse, stateListParse);
+	tree.token = result;
+    
+	if(verb)
+	{
+		if(result.type == "B_error")
+			putMessage("Not a while statement");
+		else
+			putMessage("While statement parsed");
+	}
+	
+	levelIn--;
+	tree = tree.parentRef();
+	return result;
+}
+
+
+function parseIfState(index)
+    {
+    levelIn++;
+    if(verb)
+		putMessage("Attempting to parse if statement");
+	
+	var result;
+	tree = tree.addChild("B_ifState", "");
+	var startIndex = index;
+	index++; //skip the if that has already been read    
+	
+	var boolExprParse = parseBoolExpr(index);
+    index+= boolExprParse.size;
+	
+    
+    var stateListParse = parseStatementListState(index);
+    index+= stateListParse.size;
+    
+	
+	result = new B_ifState(index-startIndex, boolExprParse, stateListParse);
+	tree.token = result;
+    
+	if(verb)
+	{
+		if(result.type == "B_error")
+			putMessage("Not a if statement");
+		else
+			putMessage("If statement parsed");
+	}
+	
+	levelIn--;
+	tree = tree.parentRef();
+	return result;
+}
+
+
 function parseExpr(index)
 {
 	levelIn++;
@@ -420,6 +502,12 @@ function parseExpr(index)
 			break;
 		case "T_userId":
 			result = parseId(index);
+			break;
+        case "T_openParen":
+    		result = parseBoolExpr(index);
+			break;
+        case "T_bool":
+    		result = parseBoolExpr(index);
 			break;
 		default: //None of those matched
             errors.add(currToken.type, "the start to an expression", 10, currToken.line, currToken.column);
@@ -476,12 +564,6 @@ function parseIntExpr(index)
         tree.addChild(opMatch.type, opMatch);
 		var exprParse = parseExpr(index);
 		index+= exprParse.size;
-		if(exprParse.type == "B_error")//This is not a valid expr
-		{
-			putMessage("Error: Expected an expression on the other side of the operator. Found "+exprParse.found.type+"at "+exprParse.found.line+":"+exprParse.found.column+". Will attempt to continue parsing");
-			errorCount++;
-			errors.push(new B_error("B_intExprWOp", "B_expr", exprParse, exprParse.size));
-		}
 		result = (new B_intExprWOp(index-startIndex,
 									digitMatch,
 									opMatch,
@@ -652,7 +734,92 @@ function parseId(index)
 	levelIn--;
 	tree = tree.parentRef();
 	return result;
-    }
+}
+
+
+function parseBoolExpr(index)
+    {
+    levelIn++;
+	if(verb)
+		putMessage("Attempting to parse bool expression");
+	
+	var result;
+	tree = tree.addChild("B_boolExpr", "");
+	var startIndex = index;
+	
+	var boolMatch = matchToken("T_bool",index);
+    if(boolMatch.type != "T_errorP")//found an explicit bool val
+	{
+        index++;
+        tree.addChild(boolMatch.type, boolMatch);
+        result = new B_boolExpr(1,boolMatch);
+	}
+    else //This must be a comparison
+    {
+        var openParenMatch = matchToken("T_openParen",index);
+        
+    	if(openParenMatch.type =="T_errorP")//The next token is not an open paren. Assume it's missing
+        {
+	    	errors.add(openParenMatch.found.type, "T_openParen", 10, openParenMatch.found.line, openParenMatch.found.column);
+    	}
+	    else
+		    index++; //skip the open paren
+        
+	
+    	var firstExprParse = parseExpr(index);
+    	index+= firstExprParse.size;
+        
+        var eqCompMatch = matchToken("T_eqComp",index);
+        if(eqCompMatch.type =="T_errorP")//The next token is not a double equals sign. Assume it's missing
+        {
+        	errors.add(eqCompMatch.found.type, "T_equal", 10, eqCompMatch.found.line, eqCompMatch.found.column);
+    	}
+	    else{
+            tree.addChild(eqCompMatch.type, eqCompMatch);
+		    index++;
+	    }
+        
+    	
+        var secondExprParse = parseExpr(index);
+        index+= secondExprParse.size;
+        
+    	var closeParenMatch = matchToken("T_closeParen", index);
+    	index++;
+    	if(closeParenMatch.type =="T_errorP")//The next token is not a close paren. Look for the next close paren and throw out anything in between
+    	{
+    		putMessage("Error: Expected a close parenthesis after the statement. Found "+closeParenMatch.found.type+" at "+closeParenMatch.found.line+":"+closeParenMatch.found.column);
+    		errors.add(closeParenMatch.found.type, "T_closeParen", 10, closeParenMatch.found.line, closeParenMatch.found.column);
+    		
+    		var nextClose = findNext("T_closeParen","T_openParen",index);
+    		if(nextClose != -1)
+    		{
+    			putMessage("   Found a close parenthesis at "+tokens[nextClose].line+ ":"+tokens[nextClose].column+". Will resume parsing from there");
+    			index = nextClose+1;
+    		}
+    		else //There are no more close parens
+    		{
+    			putMessage("   Did not find a close paren for bool expression . Will resume parsing from"+" at "+closeParenMatch.found.line+":"+closeParenMatch.found.column);
+    		}
+    	}
+    	
+        result = new B_compBoolExpr(index-startIndex,firstExprParse,eqCompMatch, secondExprParse);
+	}
+	
+	
+    tree.token = result;
+    
+	if(verb)
+	{
+		if(result.type == "B_error")
+			putMessage("Not a bool expression");
+		else
+			putMessage("Bool expression parsed");
+	}
+	
+	levelIn--;
+	tree = tree.parentRef();
+	return result;
+}
 
    
 //Utilities

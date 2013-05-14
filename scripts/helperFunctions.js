@@ -74,7 +74,7 @@ function simplePrintTree(tree, indent){
 	
 	var root = tree.type;
 	   
-	if(/userId|type|digit|char$|string$/.test(root))//This is one of the tokens with extra information
+	if(/userId|type|digit|char$|string$|bool$/.test(root))//This is one of the tokens with extra information
 		result += "[" + root + "]---"+tree.token.inside+"\n";
 	else
 		result += "[" + root + "]\n";
@@ -98,25 +98,20 @@ function printSymbolTable(tree, number)
     if(identifiers.length > 0){
         returnText += "-Scope "+number+"-\n"
     	for(var i=0;i<identifiers.length;i++){
-    		returnText +=""+identifiers[i] + "           ";
+    		returnText +=""+varObjs[i].name + "           ";
+            returnText += varObjs[i].alias;
+            if(varObjs[i].alias.length < 7){
+                for(var j=0;j<7-varObjs[i].alias.length;j++)
+                   returnText += " ";
+            }
             returnText += varObjs[i].type;
-            if(varObjs[i].type.length < 16){
-                for(var j=0;j<16-varObjs[i].type.length;j++)
+            if(varObjs[i].type.length < 10){
+                for(var j=0;j<10-varObjs[i].type.length;j++)
                    returnText += " ";
             }
             var position = varObjs[i].line+":"+varObjs[i].column
             returnText += position;
-            if(position.length < 16){
-                for(var j=0;j<16-position.length;j++)
-                    returnText += " ";
-            }
-            if(varObjs[i].value == undefined){
-                returnText += "undefined\n";
-            }
-            else if(/userId|type|digit|char$|string$/.test(varObjs[i].value.type))//This is one of the tokens with extra information
-        	    returnText += varObjs[i].value.inside+"\n";
-    	    else
-    		    returnText += varObjs[i].value.type+"\n";
+            returnText +="\n";
     	}
     returnText +="\n";
     }

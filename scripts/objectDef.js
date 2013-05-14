@@ -6,11 +6,33 @@ function T_print(line, column)
 	this.column = column;
    }
    
+   function T_while(line, column)
+   {
+    this.type ="T_while";
+	this.line = line;
+	this.column = column;
+   }
+   
+   function T_if(line, column)
+   {
+    this.type ="T_if";
+	this.line = line;
+	this.column = column;
+   }
+   
    function T_equal(line, column)
    {
 	this.type ="T_equal";
 	this.line = line;
 	this.column = column;
+   }
+   
+   function T_eqComp(line, column)
+   {
+    this.type ="T_eqComp";
+	this.line = line;
+	this.column = column;
+    this.inside = "=="
    }
    
    function T_qoute(line, column)
@@ -67,11 +89,11 @@ function T_print(line, column)
    
     function T_userId(str, line, column)
    {
-	   this.type ="T_userId";
-	   this.inside = str;
+	this.type ="T_userId";
+	this.inside = str;
 	this.line = line;
 	this.column = column;
-    this.scope = "";
+    this.entry = "";
    }
    
    function T_type(str, line, column)
@@ -94,6 +116,14 @@ function T_print(line, column)
     function T_char(ident, line, column)
    {
 	this.type ="T_char";
+	this.inside = ident;
+	this.line = line;
+	this.column = column;
+   }
+   
+   function T_bool(ident, line, column)
+   {
+    this.type ="T_bool";
 	this.inside = ident;
 	this.line = line;
 	this.column = column;
@@ -177,6 +207,23 @@ function B_statementList(size, statement, statementList)
 	this.type ="B_statementList";
    }
    
+function B_whileState(size, cond, statementList)
+   {
+       this.size = size;
+	   this.cond = cond;
+	   this.statementList = statementList;
+	this.type ="B_whileState";
+   }
+   
+function B_ifState(size, cond, statementList)
+   {
+       this.size = size;
+       this.cond = cond;
+	   this.statementList = statementList;
+	this.type ="B_ifState";
+   }   
+   
+   
 function B_intExpr(size, inner)
    {
 	   this.size = size;
@@ -192,7 +239,23 @@ function B_intExprWOp(size, digitT, op, expr)
 	   this.expr = expr;
 	this.type ="B_intExprWOp";
    }
+ 
+function B_boolExpr(size, inner)
+   {
+       this.size = size;
+	   this.inner = inner;
+	this.type ="B_boolExpr";
+   }
    
+function B_compBoolExpr(size, firstExpr, op, secondExpr)
+   {
+       this.size = size;
+	   this.firstExpr = firstExpr;
+       this.op = op;
+       this.secondExpr = secondExpr;
+	this.type ="B_compBoolExpr";
+   }
+ 
 function B_stringExpr(size, inner)
    {
        this.size = size;
@@ -372,12 +435,15 @@ function HashTable(table)
     }
 }
 
-function variable(type, value, line, column){
+function variable(type, name, line, column){
 	this.type = type;
-	this.value = value;
+	this.name = name;
     this.line = line;
     this.column = column;
+    this.tree = "";
+    this.init = false;
     this.used = false;
+    this.alias =name;
 }
 
 
@@ -398,6 +464,7 @@ function ScopeTree(parent){
 	}
 	
 	this.setVar = function(id, newVar){
+        newVar.tree = this;
 		return this.symTable.setItem(id, newVar);
 	}
     
@@ -418,7 +485,7 @@ function ScopeTree(parent){
     this.print = function(){
         var returnText ="";
 	    returnText +="Symbol Table:\n";
-	    returnText +="Identifier |Type           |Decl Location  |Value\n";
+	    returnText +="Identifier |Alias |Type     |Decl Location\n";
         returnText += printSymbolTable(this, 0)
         putMessage(returnText);
     }
@@ -443,7 +510,7 @@ errorReference[20] = "Invalid type in variable declaration. Declaration was ";
 errorReference[21] = "Redeclared variable. Previous declaration was ";
 errorReference[22] = "Type mismatch in operation. Operation was ";
 errorReference[23] = "Type mismatch in id assignment. Id assignment was ";
-errorReference[24] = "Undeclared id. Id was:";
+errorReference[24] = "Undeclared id. Id was: ";
 
 
 
@@ -473,7 +540,8 @@ function ErrorHandler()
 	this.add = function(found, expected, num, line, col)
 	{
 		errorArr.push(new error(found, expected, num, line, col));
-		count++;
+		if(num < 50) //Not a warning
+            count++;
 	}
     
     this.errorCount = function(){
@@ -482,7 +550,7 @@ function ErrorHandler()
 	
 	this.print = function(){
 		putMessage("Error List:");
-		for(var i=0;i<count;i++){
+		for(var i=0;i<errorArr.length;i++){
 			var currError =errorArr[i];
 			if(currError.num == 10)
 				putMessage("Error "+currError.num+" at "+currError.line+","+currError.column+" : "+errorReference[currError.num]+currError.expected+" found "+currError.found);

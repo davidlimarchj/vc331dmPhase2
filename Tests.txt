@@ -1,20 +1,9 @@
 Working:
-{int a {int b b=2 a=1 int c c=a c=1+b} {int d d=5} a=2 string b b ="a pie" {print(b){}}}$
+{int a {int b b=2 a=1 int c c=a c=1+b} {int d d=5} a=2 string b b ="a pie" {print(b){ print(c)}}}$
+{string a a = "lets loop forever" print(a) int b b =0 while true {b = 1+b print(b)} print(a)}
+{if true {string b b = "woo" print(b)}} 
+{int a a = 2 {int a a =3 {string a a ="lets start here " print(a)} int b b =2+a print(a) print(b)} print(a)}
 
-Warnings:
-{int a int b a=1{string a a="abc" {print(a)}} {string c print(2+a)}}
-int a $ int c
-
-Lex Errors:
-{broken a print(/) a=";"}$
-int a$ int b
-
-First Parse Errors:
-{string a a = "asb
-a+1
-
-Symbol Table Errors:
-{inz a string a print(b)}$
-
-Symbol Table Warnings:
-{string b string b int d print(1+b) d="a cat" e=5}$
+Non-working:
+Sometimes comparison
+Conditional string assignment

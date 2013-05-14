@@ -39,13 +39,16 @@ op            ::== + | -
 <input type="checkbox" id="lexVerb">Verbose Lexer
 <input type="checkbox" id="firstParseVerb">Verbose First Pass Parse
 <input type="checkbox" id="secondParseVerb">Verbose Second Pass Parse
+<input type="checkbox" id="codeGenVerb">Verbose Code Gen
 </form>
+01________10________20________30________40________50________60________70________80________90________100
     <div>
         <textarea id="taSourceCode" cols="130" rows="18"></textarea>
         <br>
         <input type="button" id="btnCompile" value="Compile" onclick="btnCompile_click();"/>
         <br>
         <textarea id="taOutput" cols="130" rows="22"></textarea>
+        <textarea id="taCode" cols="40" rows="22"></textarea>
     </div> 
     <!-- Footer -->
     <p>
@@ -59,13 +62,16 @@ op            ::== + | -
     <script type="text/javascript" src="scripts/helperFunctions.js"></script>
     <script type="text/javascript" src="scripts/lexer.js"></script>
     <script type="text/javascript" src="scripts/firstPassParse.js"></script>	
-    <script type="text/javascript" src="scripts/secondPassParse.js"></script>   
+    <script type="text/javascript" src="scripts/secondPassParse.js"></script>
+    <script type="text/javascript" src="scripts/codeGen.js"></script>
     <script type="text/javascript">
     // Global variables
     var tokens = new Array();
     var CST = "";
     var AST = "";
+    var gbScopeTree ="";
     var levelIn = 0;
+    var anyErrors = false;
 
 
     
@@ -76,12 +82,15 @@ op            ::== + | -
         // Note the <input> element's event handler: onclick="btnCompile_click();
         
 	// Clear the message box, reset variables
-        document.getElementById("taOutput").value = "";
+    document.getElementById("taOutput").value = "";
+    document.getElementById("taCode").value = "";
 	tokens = [];
-	CST = "";
-	levelIn = 0;
+	AST = "";
+    gbScopeTree ="";
+    levelIn = 0;
+    anyErrors = false;
+	
 
-	//Assign verbosity
 
     putMessage("Compilation Started");
     // Grab the tokens from the lexer . . .
@@ -91,6 +100,11 @@ op            ::== + | -
 	//Parse them
     CST = firstPassParse(document.getElementById("firstParseVerb").checked);
     AST = secondPassParse(document.getElementById("secondParseVerb").checked, CST);
+    
+    if(anyErrors == false)
+        codeGen(document.getElementById("codeGenVerb").checked, AST);
+    
+    
 	putMessage("\nCompilation Finished");
     }
     
@@ -106,3 +120,4 @@ op            ::== + | -
     </script>
 </body>
 </html>
+levelIn = 0;

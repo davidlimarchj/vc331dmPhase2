@@ -38,7 +38,8 @@
 		lexReturnText += "]\n";
 		putMessage(lexReturnText);    
 		
-		
+		if(errors.errorCount() > 0)
+        anyErrors = true;
 		
 		return tokens;
 	    }
@@ -56,7 +57,7 @@
 			var column = 0; //Tracks column number
 			
 			//The Regular Expressions we will be searching for
-			var symbolRege = /[\+\-\(\)\{\}\"=$]/;
+			var symbolRege = /[\+\-\(\)\{\}\"$=]/;
 			var wsRege = /\s/;
 			var charRege = /[a-z]/;
 			var digitRege = /[0-9]/;
@@ -84,8 +85,16 @@
 								putMessage("Encountered Symbol");
 							if(arr[i] == '"') //Open qoute, toggle flag
 								inQoutes = true;
-						    tokenList.push(symbolAnalysis(arr[i], line, column));
-						    column++;
+                            if(arr[i] == '=' && arr[i+1] == '=') //Comparison, not equals
+                            {
+                                tokenList.push(new T_eqComp(line, column));
+                                i++;
+                                column = column +2;
+                            }
+                            else{
+						        tokenList.push(symbolAnalysis(arr[i], line, column));
+						        column++;
+                            }
 						}
 						else if(charRege.test(arr[i])) //Identifiers
 						{
@@ -159,13 +168,13 @@
 			
 			if(!foundEOF)
 			{
-                errors.add(null, "End of File", 50, line, column);
+                errors.add("", "End of File", 50, line, column);
 				//putMessage("Warning: Expected a dollar sign at the end of the program. Added for you");
 				tokenList.push(new T_EOF(line, column));
 			}
 			else if(i < arr.length)
 			{
-                errors.add(null, "Nothing", 51, line, column);
+                errors.add("", "Nothing", 51, line, column);
 				//putMessage("Warning: Found code after the dollar sign. Ignored.");
 			}
 			
@@ -216,8 +225,23 @@ function identifierAnalysis(str, line, column)
 			case "int":
 				return new T_type(str, line, column);
 				break;
+            case "boolean":
+    			return new T_type(str, line, column);
+				break;
+            case "true":
+        		return new T_bool(str, line, column);
+				break;
+            case "false":
+        		return new T_bool(str, line, column);
+				break;
 			case "print":
 				return new T_print(line, column);
+				break;
+            case "while":
+    			return new T_while(line, column);
+				break;
+            case "if":
+    			return new T_if(line, column);
 				break;
 			default:
 				errors.add(str, null, 2, line, column);

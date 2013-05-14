@@ -8,11 +8,14 @@
 
     
     //Constants
-    var typeRege =/int|string/;
-    var intExprRege = /T_digit|_sub$|_plus$/;
+    var typeRege =/int|string|boolean/;
+    var intExprRege = /T_digit|_sub$|_plus$|int/;
+    var boolExprRege = /_eqComp$|_bool|boolean/;
+    var stringExprRege = /_string$|string/;
     var intOpRege = /_sub$|_plus$/;
+    var compRege = /_eqComp$/;
     var oneChildRege = /printState/;
-    var twoChildRege = /idState|varDecl|_plus$|_sub$/;
+    var twoChildRege = /idState|varDecl|while|if|_plus$|_sub$|_eqComp/;
     
     
 
@@ -41,12 +44,14 @@ function secondPassParse(verbose, inCST)
         putMessage(result+"\n");
     }
 	
-    //Report the results.
+    
     buildSymTable();
     putMessage("Symbol tree built with "+errors.errorCount()+" errors.");
-    processOne();
-  
+    gbScopeTree = scopeTree;
+   
+   processOne();
 	
+    //Report the results.
     putMessage("Finished Second Pass Parsing");
 	levelIn--;
 
@@ -54,13 +59,19 @@ function secondPassParse(verbose, inCST)
     putMessage("AST:");
     tree.print();
     scopeTree.print();
+    
+    if(errors.errorCount() > 0)
+        anyErrors = true;
+    
 	    
 	return tree;
 }
 
 function buildQueue(CST){
     var numChildren = CST.children.length;
-    var specialRege = /NEWSCOPE|printState|idState|varDecl/;
+    var specialRege = /NEWSCOPE|printState|idState|varDecl|whileState|ifState/;
+    
+    //putMessage("Queing "+CST.type);
     
     if(numChildren == 0){//this is a leaf, push it on the queue
         queue.push(CST.token);
@@ -105,8 +116,8 @@ function buildSymTable(){
             var id = idWrap.inside;
 
     		var previous = scopeTree.localHas(id)
-            var newVar = new variable(type, undefined, typeWrap.line, typeWrap.column);
-            idWrap.scopeLevel = scopeTree;
+            var newVar = new variable(type, id, typeWrap.line, typeWrap.column);
+            newVar.alias = ""+i;
             //Add it to the symbol table
     		if(previous == null)//This is a new variable, declare it if the type is valid
     		{
@@ -114,6 +125,7 @@ function buildSymTable(){
                     errors.add(type,id,20,typeWrap.line, typeWrap.column);
                 }
                 scopeTree.setVar(id, newVar);
+                idWrap.entry = newVar;
     		}
     		else //The variable is declared in the local scope. Push error, overwrite
     		{
@@ -136,7 +148,6 @@ function buildSymTable(){
                 queue.unshift(idWrap);
                 
                 var id = idWrap.inside;
-                var value = valWrap.inside;
     
             	var previous = scopeTree.member(id);
                 
@@ -145,11 +156,16 @@ function buildSymTable(){
         		{
                     var typeVal = typeCheck(scopeTree, previous.type, valWrap);
                     if(typeVal != null){
-                        previous.value = valWrap;
-                        scopeTree.setVar(id, previous);
+                        var newVar = new variable(previous.type, id, idWrap.line, idWrap.column);
+                        if(previous.used)
+                            previous.tree.setVar(id+previous.alias, previous);
+                        
+                        newVar.init = true;
+                        newVar.alias = ""+i;
+                        previous.tree.setVar(id, newVar);
                     }
                     else
-                        errors.add(id+"=",value,23,idWrap.line, idWrap.column);
+                        errors.add(id+"=",valWrap.inside,23,idWrap.line, idWrap.column);
         		}  
         		else //The variable isn't declared in this scope. Push error
         		{
@@ -171,6 +187,35 @@ function buildSymTable(){
                     errors.add(digitWrap.inside,currItem.inside+exprWrap.inside,22,digitWrap.line, digitWrap.column);
                 }
             }
+            else if(compRege.test(currItem.type)){
+                var firstExprWrap = queue.shift();
+            	var secondExprWrap = queue.shift();
+                queue.unshift(secondExprWrap);
+                queue.unshift(firstExprWrap);
+                
+                
+                var leftType;
+                var rightType;
+                
+                if(firstExprWrap.type == "T_userId"){
+                    var assignVar = scopeTree.member(firstExprWrap.inside);
+                    if(assignVar != null){
+                        leftType = assignVar.type;
+                    }
+                    else{
+                        errors.add("",firstExprWrap.inside,23, firstExprWrap.line, firstExprWrap.column);
+                        leftType = "unknown";
+                   }
+                }
+                else
+                    leftType = firstExprWrap.type
+                
+                var typeVal = typeCheck(scopeTree, leftType, secondExprWrap);
+                
+                if(typeVal == null){
+                    errors.add(firstExprWrap.inside,currItem.inside+secondExprWrap.inside,22,firstExprWrap.line, firstExprWrap.column);
+                }
+            }
             else if(currItem.type == "NEWSCOPE"){
                 scopeTree = scopeTree.newScope();
             }
@@ -180,8 +225,10 @@ function buildSymTable(){
             else if(currItem.type == "T_userId"){
                 var currVar = scopeTree.member(currItem.inside);
                 if(currVar != null){
+                    currItem.entry = currVar;
                     currVar.used = true;
-                    if (currVar.value == undefined) {
+                    currItem.entry = currVar;
+                    if (!currVar.init) {
                         errors.add(currItem.inside,"",54,currVar.line, currVar.column);    
                     }
                 }
@@ -200,6 +247,7 @@ function buildSymTable(){
 
 
 function processOne(){
+    levelIn++
     var currItem = queue.shift();
     var currType = currItem.type;
     
@@ -212,7 +260,7 @@ function processOne(){
     }
     else if(twoChildRege.test(currType)){
         if(verb)
-            putMessage("AST processing branch with two child");
+            putMessage("AST processing branch with two children");
         tree = tree.addChild(currType, currItem);
         processOne();
         processOne();
@@ -241,6 +289,7 @@ function processOne(){
         putMessage("ERROR: AST hit END. AST should never hit END");
     }
     
+    levelIn--;
 }
 
 function makeString(charList){
@@ -270,18 +319,19 @@ function typeCheck(sTree, type, val){
         //putMessage("Type Chekain. type:"+type+". val: "+val.inside+" val.type "+val.type)
 
         if(val.type == "T_userId"){
-             var assignVar = scopeTree.member(val.inside);
+        
+             var assignVar = sTree.member(val.inside);
              if(assignVar != null){
-                 result = typeCheck(sTree, type, assignVar.value);
+                 result = typeCheck(sTree, type, assignVar);
              }
              else{
                 errors.add("",val.inside,23,val.line, val.column);
              }
          }
-        else if(type == "int" && intExprRege.test(val.type) ){
-            result =val;
-        }
-        else if(type == "string" && val.type == "T_string"){
+         else if((type == val.type) || 
+                (intExprRege.test(type) && intExprRege.test(val.type))|| 
+                (stringExprRege.test(type) && stringExprRege.test(val.type))||
+                (boolExprRege.test(type) && boolExprRege.test(val.type))){
             result =val;
         }
     }
